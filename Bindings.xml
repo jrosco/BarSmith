@@ -1,0 +1,38 @@
+<Bindings>
+  <Binding name="CLICK BarSmithModule_questItems:LeftButton">
+    -- Quest Items
+  </Binding>
+  <Binding name="CLICK BarSmithModule_consumables:LeftButton">
+    -- Consumables
+  </Binding>
+  <Binding name="CLICK BarSmithModule_consumables_potions:LeftButton">
+    -- Potions (All)
+  </Binding>
+  <Binding name="CLICK BarSmithModule_consumables_flask:LeftButton">
+    -- Flasks / Elixirs
+  </Binding>
+  <Binding name="CLICK BarSmithModule_consumables_food:LeftButton">
+    -- Food / Drink
+  </Binding>
+  <Binding name="CLICK BarSmithModule_consumables_bandage:LeftButton">
+    -- Bandages
+  </Binding>
+  <Binding name="CLICK BarSmithModule_consumables_utility:LeftButton">
+    -- Utilities
+  </Binding>
+  <Binding name="CLICK BarSmithModule_trinkets:LeftButton">
+    -- Trinkets
+  </Binding>
+  <Binding name="CLICK BarSmithModule_classSpells:LeftButton">
+    -- Class Spells
+  </Binding>
+  <Binding name="CLICK BarSmithModule_professions:LeftButton">
+    -- Professions
+  </Binding>
+  <Binding name="CLICK BarSmithModule_mounts:LeftButton">
+    -- Mounts
+  </Binding>
+  <Binding name="CLICK BarSmithModule_hearthstones:LeftButton">
+    -- Hearthstones
+  </Binding>
+</Bindings>
