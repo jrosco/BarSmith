@@ -44,7 +44,7 @@ function MinimapMod:Init()
   btn:RegisterForDrag("LeftButton")
 
   btn.icon = btn:CreateTexture(nil, "BACKGROUND")
-  btn.icon:SetTexture("Interface\\Icons\\INV_Misc_Bag_08")
+  btn.icon:SetTexture("Interface\\AddOns\\BarSmith\\Textures\\bs")
   btn.icon:SetAllPoints()
 
   btn.border = btn:CreateTexture(nil, "OVERLAY")
