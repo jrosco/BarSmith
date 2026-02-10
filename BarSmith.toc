@@ -24,6 +24,7 @@ Modules\ClassSpells.lua
 Modules\Professions.lua
 Modules\Mounts.lua
 Modules\Hearthstones.lua
+Modules\Macros.lua
 Modules\BarFrameSettings.lua
 Modules\BarFrame.lua
 Modules\Minimap.lua

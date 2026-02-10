@@ -35,6 +35,7 @@ BarSmith.DEFAULTS = {
       professions  = true,
       mounts       = true,
       hearthstones = true,
+      macros       = false,
     },
 
     -- Priority order (lower = placed first, gets earlier slots)
@@ -46,6 +47,7 @@ BarSmith.DEFAULTS = {
       "professions",
       "mounts",
       "classSpells",
+      "macros",
     },
 
     -- Per-module remembered "last used" action identity.
@@ -96,6 +98,12 @@ BarSmith.DEFAULTS = {
       includeEngineer = true,        -- Wormhole generators, etc.
       includeToys     = true,        -- Hearthstone toy variants
       preferredToyID  = nil,         -- specific toy ID to always place
+    },
+
+    -- Macro settings
+    macros = {
+      slotCount = 1,                 -- number of macro slots to create
+      slots = {},                    -- slotIndex -> { macroID = X }
     },
   },
 }

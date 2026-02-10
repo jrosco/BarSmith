@@ -183,6 +183,12 @@ function BarSmith:GetActionIdentityKey(data)
   if data.spellID then
     return "spell:" .. tostring(data.spellID)
   end
+  if data.macroID then
+    return "macro:" .. tostring(data.macroID)
+  end
+  if data.slotIndex then
+    return "macro_slot:" .. tostring(data.slotIndex)
+  end
   if data.name then
     return "name:" .. tostring(data.name)
   end

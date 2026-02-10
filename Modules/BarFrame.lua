@@ -89,6 +89,11 @@ function BarFrame:Init()
   self.frame:SetBackdropBorderColor(0.3, 0.3, 0.3, 0.9)
   self:UpdateBackdropVisibility()
 
+  -- Allow dropping icon anywhere on the bar frame
+  self.frame:SetScript("OnReceiveDrag", function()
+    self:HandleReceiveDrag(nil)
+  end)
+
   -- Drag anchor (shown only when unlocked)
   self.dragAnchor = CreateFrame("Frame", "BarSmithDragAnchor", self.frame, "BackdropTemplate")
   self.dragAnchor:SetSize(32, 32)
@@ -224,6 +229,7 @@ function BarFrame:EnsureModuleButtons()
     "professions",
     "mounts",
     "hearthstones",
+    "macros",
   }
 
   for _, key in ipairs(moduleKeys) do
@@ -650,14 +656,17 @@ function BarFrame:SetFlyoutItems(btn, children)
     childBtn:SetAttribute("spell", nil)
     childBtn:SetAttribute("item", nil)
     childBtn:SetAttribute("toy", nil)
+    childBtn:SetAttribute("macrotext", nil)
     childBtn:SetAttribute("type1", nil)
     childBtn:SetAttribute("spell1", nil)
     childBtn:SetAttribute("item1", nil)
     childBtn:SetAttribute("toy1", nil)
+    childBtn:SetAttribute("macrotext1", nil)
     childBtn:SetAttribute("type2", nil)
     childBtn:SetAttribute("spell2", nil)
     childBtn:SetAttribute("item2", nil)
     childBtn:SetAttribute("toy2", nil)
+    childBtn:SetAttribute("macrotext2", nil)
     childBtn.itemData = nil
 
     if childBtn.cooldown then
@@ -728,7 +737,7 @@ end
 -- Drag & drop support for consumable includes
 ------------------------------------------------------------------------
 
-function BarFrame:HandleReceiveDrag()
+function BarFrame:HandleReceiveDrag(btn)
   if InCombatLockdown() then
     BarSmith:Print("Cannot add includes during combat.")
     ClearCursor()
@@ -741,7 +750,35 @@ function BarFrame:HandleReceiveDrag()
     return
   end
 
-  if cursorType == "item" then
+  if cursorType == "macro" then
+    local target = btn and btn.itemData
+    local macros = BarSmith:GetModule("Macros")
+    if macros then
+      if target and target.type == "macro" then
+        if not target.macroID then
+          if macros:AssignMacroToSlot(target.slotIndex, id) then
+            BarSmith:RunAutoFill(true)
+          else
+            BarSmith:Print("Could not assign macro to that slot.")
+          end
+        else
+          local ok, err = macros:AddMacroToNextSlot(id)
+          if ok then
+            BarSmith:RunAutoFill(true)
+          else
+            BarSmith:Print(err or "Could not add macro.")
+          end
+        end
+      else
+        local ok, err = macros:AddMacroToNextSlot(id)
+        if ok then
+          BarSmith:RunAutoFill(true)
+        else
+          BarSmith:Print(err or "Could not add macro.")
+        end
+      end
+    end
+  elseif cursorType == "item" then
     BarSmith:RemoveFromExcludeForItemID(id)
     local con = BarSmith:GetModule("Consumables")
     if con and con:AddExtraItem(id) then
@@ -914,14 +951,17 @@ function BarFrame:ClearButton(index)
   btn:SetAttribute("spell", nil)
   btn:SetAttribute("item", nil)
   btn:SetAttribute("toy", nil)
+  btn:SetAttribute("macrotext", nil)
   btn:SetAttribute("type1", nil)
   btn:SetAttribute("spell1", nil)
   btn:SetAttribute("item1", nil)
   btn:SetAttribute("toy1", nil)
+  btn:SetAttribute("macrotext1", nil)
   btn:SetAttribute("type2", nil)
   btn:SetAttribute("spell2", nil)
   btn:SetAttribute("item2", nil)
   btn:SetAttribute("toy2", nil)
+  btn:SetAttribute("macrotext2", nil)
 
   btn.icon:SetTexture(nil)
   btn.count:SetText("")
@@ -1145,6 +1185,7 @@ function BarFrame:ShowButtonTooltip(btn)
     hearthstone_toy = { label = "Hearthstone (Toy)", color = { 0.9, 0.6, 0.2 } },
     engineer_teleport = { label = "Engineer Teleport", color = { 0.6, 0.9, 0.9 } },
     profession = { label = "Profession", color = { 0.8, 0.8, 1.0 } },
+    macro = { label = "Macro", color = { 0.9, 0.9, 0.5 } },
   }
 
   local function GetTypeLabelAndColor(item)
@@ -1185,7 +1226,11 @@ function BarFrame:ShowButtonTooltip(btn)
     GameTooltip:AddLine("Left-click to expand " .. groupLabel, 0.8, 0.8, 0.8)
   end
   GameTooltip:AddLine("Alt-Left-click to exclude", 0.8, 0.8, 0.8)
-  GameTooltip:AddLine("Drag a consumable, mount, or spell to include (clears exclude)", 0.8, 0.8, 0.8)
+  if data.type == "macro" then
+    GameTooltip:AddLine("Drag a macro to assign it to this slot", 0.8, 0.8, 0.8)
+  else
+    GameTooltip:AddLine("Drag a consumable, mount, or spell to include (clears exclude)", 0.8, 0.8, 0.8)
+  end
   GameTooltip:Show()
 end
 
