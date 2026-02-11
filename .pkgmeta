@@ -1,0 +1,4 @@
+package-as: BarSmith
+
+ignore:
+  - assets
