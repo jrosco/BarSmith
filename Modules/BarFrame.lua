@@ -507,7 +507,15 @@ function BarFrame:SetButtonAction(btn, data, clickButton)
   btn:SetAttribute("spell2", nil)
   btn:SetAttribute("item2", nil)
   btn:SetAttribute("toy2", nil)
+  btn:SetAttribute("alt-type1", nil)
+  btn:SetAttribute("alt-macrotext1", nil)
+  btn:SetAttribute("shift-type2", nil)
+  btn:SetAttribute("shift-macrotext2", nil)
   btn:SetAttribute("macrotext2", nil)
+  btn:SetAttribute("alt-type1", nil)
+  btn:SetAttribute("alt-macrotext1", nil)
+  btn:SetAttribute("shift-type2", nil)
+  btn:SetAttribute("shift-macrotext2", nil)
 
   if not data then
     return
@@ -519,6 +527,11 @@ function BarFrame:SetButtonAction(btn, data, clickButton)
   if data.macrotext then
     btn:SetAttribute("type" .. attrPrefix, "macro")
     btn:SetAttribute("macrotext" .. attrPrefix, data.macrotext)
+    -- Reserve modified clicks for menu/exclude without triggering the macro.
+    btn:SetAttribute("alt-type1", "macro")
+    btn:SetAttribute("alt-macrotext1", "/stopmacro")
+    btn:SetAttribute("shift-type2", "macro")
+    btn:SetAttribute("shift-macrotext2", "/stopmacro")
     return
   end
 
@@ -545,6 +558,12 @@ function BarFrame:SetButtonAction(btn, data, clickButton)
       btn:SetAttribute("item" .. attrPrefix, itemRef)
     end
   end
+
+  -- Reserve modified clicks for menu/exclude without triggering the action.
+  btn:SetAttribute("alt-type1", "macro")
+  btn:SetAttribute("alt-macrotext1", "/stopmacro")
+  btn:SetAttribute("shift-type2", "macro")
+  btn:SetAttribute("shift-macrotext2", "/stopmacro")
 end
 
 function BarFrame:ApplyButtonVisuals(btn, data)
