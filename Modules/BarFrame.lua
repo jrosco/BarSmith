@@ -395,6 +395,9 @@ function BarFrame:CreateButton(index)
     if b.flyoutOpen then
       self:CancelAutoCloseTimer()
     end
+    if b.flyoutItems and #b.flyoutItems > 1 and not b.flyoutOpen then
+      self:ShowFlyout(b)
+    end
     self:ShowButtonTooltip(b)
   end)
   btn:SetScript("OnLeave", function(b)
@@ -408,7 +411,6 @@ function BarFrame:CreateButton(index)
     self:HandleReceiveDrag(b)
   end)
 
-  -- Left-click toggles grouped flyout (if present)
   -- HookScript preserves ActionButtonTemplate's existing OnMouseUp handler
   btn:HookScript("OnMouseUp", function(b, button)
     if IsSettingsClick(button) then
@@ -417,9 +419,6 @@ function BarFrame:CreateButton(index)
         settings:ToggleIncludeExcludeFrame(b)
       end
       return
-    end
-    if button == "LeftButton" and b.flyoutItems and #b.flyoutItems > 1 then
-      self:ToggleFlyout(b)
     end
   end)
   btn:HookScript("PostClick", function(b, button)
@@ -802,11 +801,33 @@ function BarFrame:HandleReceiveDrag(btn)
   ClearCursor()
 end
 
+-- When a flyout child button is clicked, promote that child to be the new primary for the parent group.
 function BarFrame:PromoteChildAsPrimary(parentBtn, childData)
   if not parentBtn or not childData then return end
   if not parentBtn.groupData or not parentBtn.flyoutItems or #parentBtn.flyoutItems <= 1 then
     return
   end
+
+  local moduleName = parentBtn.groupData.module
+  if moduleName then
+    self:SetModuleButton(moduleName, childData)
+  end
+
+  -- Keep the last-used child at the top of the flyout list.
+  -- Delay this until after the click processing finishes.
+  C_Timer.After(0.2, function()
+    if not parentBtn or not parentBtn.flyoutItems then return end
+    for i, entry in ipairs(parentBtn.flyoutItems) do
+      if entry == childData then
+        if i > 1 then
+          table.remove(parentBtn.flyoutItems, i)
+          table.insert(parentBtn.flyoutItems, 1, entry)
+        end
+        break
+      end
+    end
+    self:SetFlyoutItems(parentBtn, parentBtn.flyoutItems)
+  end)
 
   parentBtn.groupData.primary = childData
   parentBtn.groupData.icon = childData.icon
@@ -911,7 +932,7 @@ function BarFrame:SetButton(index, itemData)
     actionData = itemData.primary
     btn.groupData = itemData
     self:SetFlyoutItems(btn, itemData.children or {})
-    self:SetButtonAction(btn, actionData, "2")
+    self:SetButtonAction(btn, actionData, nil)
   else
     btn.groupData = nil
     self:SetFlyoutItems(btn, nil)
@@ -936,6 +957,17 @@ function BarFrame:SetModuleButtons(modulePrimary)
     local data = modulePrimary and modulePrimary[key] or nil
     self:SetButtonAction(btn, data, nil)
   end
+end
+
+function BarFrame:SetModuleButton(moduleKey, data)
+  if not moduleKey then return end
+  if not self.moduleButtons then
+    self:EnsureModuleButtons()
+  end
+  if not self.moduleButtons then return end
+  local btn = self.moduleButtons[moduleKey]
+  if not btn then return end
+  self:SetButtonAction(btn, data, nil)
 end
 
 ------------------------------------------------------------------------
@@ -1222,8 +1254,8 @@ function BarFrame:ShowButtonTooltip(btn)
   end
   if btn.flyoutItems and #btn.flyoutItems > 1 then
     GameTooltip:AddLine("Shift-Right-click to open menu", 0.8, 0.8, 0.8)
-    local groupLabel = (btn.groupData and btn.groupData.name) or (#btn.flyoutItems .. " items")
-    GameTooltip:AddLine("Left-click to expand " .. groupLabel, 0.8, 0.8, 0.8)
+    -- local groupLabel = (btn.groupData and btn.groupData.name) or (#btn.flyoutItems .. " items")
+    -- GameTooltip:AddLine(groupLabel, 0.8, 0.8, 0.8)
   end
   GameTooltip:AddLine("Alt-Left-click to exclude", 0.8, 0.8, 0.8)
   if data.type == "macro" then
@@ -1289,8 +1321,19 @@ end
 ------------------------------------------------------------------------
 
 function BarFrame:SetLocked(locked)
+  if not BarSmith.chardb then return end
+  if not locked then
+    if BarSmith.chardb._autoHideBeforeUnlock == nil then
+      BarSmith.chardb._autoHideBeforeUnlock = BarSmith.chardb.barAutoHideMouseover
+    end
+    BarSmith.chardb.barAutoHideMouseover = false
+  elseif BarSmith.chardb._autoHideBeforeUnlock ~= nil then
+    BarSmith.chardb.barAutoHideMouseover = BarSmith.chardb._autoHideBeforeUnlock
+    BarSmith.chardb._autoHideBeforeUnlock = nil
+  end
   BarSmith.chardb.barLocked = locked
   self:UpdateLayout()
+  self:UpdateAutoHideState()
 
   if locked then
     BarSmith:Print("Bar locked.")

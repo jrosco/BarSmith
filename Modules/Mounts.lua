@@ -42,12 +42,14 @@ function Mounts:GetItems()
 
   local function addMount(mountID, name, spellID, icon, isDragonriding)
     if not spellID then return end
+    local macrotext = "/dismount [mounted]\n/cast " .. (name or "Mount")
     table.insert(items, {
       spellID = spellID,
       mountID = mountID,
       name = name or "Mount",
       icon = icon,
       isDragonriding = isDragonriding,
+      macrotext = macrotext,
       type = "mount",
     })
   end
@@ -84,7 +86,7 @@ function Mounts:GetItems()
         spellID = self.RANDOM_FAVORITE_MOUNT,
         name = "Summon Random Favorite Mount",
         icon = 853211,       -- mount icon
-        macrotext = "/run if C_MountJournal and C_MountJournal.SummonByID then C_MountJournal.SummonByID(0) end",
+        macrotext = "/dismount [mounted]\n/run if C_MountJournal and C_MountJournal.SummonByID then C_MountJournal.SummonByID(0) end",
         type = "mount",
       })
       markSeen(spellID)

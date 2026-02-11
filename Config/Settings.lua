@@ -50,7 +50,11 @@ end
 ------------------------------------------------------------------------
 
 function mod:Init()
-  local category, layout                      = Settings.RegisterVerticalLayoutCategory("BarSmith")
+  local title = "BarSmith"
+  if BarSmith and BarSmith.version then
+    title = "BarSmith |cff00ff00v" .. tostring(BarSmith.version) .. "|r"
+  end
+  local category, layout                      = Settings.RegisterVerticalLayoutCategory(title)
   BarSmith.settingsCategoryID                 = category:GetID()
 
   -- Seed proxy with current values

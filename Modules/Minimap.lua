@@ -41,6 +41,7 @@ function MinimapMod:Init()
   btn:SetFrameStrata("MEDIUM")
   btn:SetMovable(true)
   btn:EnableMouse(true)
+  btn:RegisterForClicks("AnyUp")
   btn:RegisterForDrag("LeftButton")
 
   btn.icon = btn:CreateTexture(nil, "BACKGROUND")
@@ -55,6 +56,7 @@ function MinimapMod:Init()
     GameTooltip:SetOwner(btn, "ANCHOR_LEFT")
     GameTooltip:SetText("BarSmith")
     GameTooltip:AddLine("Left-click: Open settings", 0.8, 0.8, 0.8)
+    GameTooltip:AddLine("Right-click: Lock/Unlock bar", 0.8, 0.8, 0.8)
     GameTooltip:Show()
   end)
   btn:SetScript("OnLeave", function()
@@ -64,6 +66,11 @@ function MinimapMod:Init()
   btn:SetScript("OnClick", function(_, button)
     if button == "LeftButton" then
       BarSmith:OpenSettings()
+    elseif button == "RightButton" then
+      local barFrame = BarSmith:GetModule("BarFrame")
+      if barFrame and barFrame.SetLocked then
+        barFrame:SetLocked(not BarSmith.chardb.barLocked)
+      end
     end
   end)
 
