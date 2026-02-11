@@ -719,6 +719,7 @@ end
 
 function BarFrame:HandleButtonPostClick(btn, button)
   if not btn or not btn.itemData then return end
+  if btn.itemData.isPlaceholder then return end
 
   -- Group parents use left-click to toggle flyout, not to execute an action.
   if btn.groupData and btn.flyoutItems and #btn.flyoutItems > 1 and button == "LeftButton" then
@@ -1196,6 +1197,7 @@ function BarFrame:ShowButtonTooltip(btn)
     hearthstone_toy = { label = "Hearthstone (Toy)", color = { 0.9, 0.6, 0.2 } },
     engineer_teleport = { label = "Engineer Teleport", color = { 0.6, 0.9, 0.9 } },
     profession = { label = "Profession", color = { 0.8, 0.8, 1.0 } },
+    placeholder = { label = "Empty Module", color = { 0.6, 0.6, 0.6 } },
   }
 
   local function GetTypeLabelAndColor(item)
@@ -1235,8 +1237,12 @@ function BarFrame:ShowButtonTooltip(btn)
     -- local groupLabel = (btn.groupData and btn.groupData.name) or (#btn.flyoutItems .. " items")
     -- GameTooltip:AddLine(groupLabel, 0.8, 0.8, 0.8)
   end
-  GameTooltip:AddLine("Alt-Left-click to exclude", 0.8, 0.8, 0.8)
-  GameTooltip:AddLine("Drag a consumable, mount, or spell to include (clears exclude)", 0.8, 0.8, 0.8)
+  if data.isPlaceholder then
+    GameTooltip:AddLine("No items available in this category.", 0.8, 0.8, 0.8)
+  else
+    GameTooltip:AddLine("Alt-Left-click to exclude", 0.8, 0.8, 0.8)
+    GameTooltip:AddLine("Drag a consumable, mount, or spell to include (clears exclude)", 0.8, 0.8, 0.8)
+  end
   GameTooltip:Show()
 end
 

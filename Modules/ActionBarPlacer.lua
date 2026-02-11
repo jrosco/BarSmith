@@ -84,6 +84,7 @@ function Placer:GatherItems()
     professions  = function() return BarSmith:GetModule("Professions"):GetItems() end,
     mounts       = function() return BarSmith:GetModule("Mounts"):GetItems() end,
     hearthstones = function() return BarSmith:GetModule("Hearthstones"):GetItems() end,
+    macros       = function() return BarSmith:GetModule("Macros"):GetItems() end,
   }
 
   local function isEnabled(modName)
@@ -130,6 +131,23 @@ Placer.MODULE_LABELS = {
   professions  = "Professions",
   mounts       = "Mounts",
   hearthstones = "Hearthstones",
+  macros       = "Macros",
+}
+
+Placer.MODULE_PLACEHOLDER_ICONS = {
+  questItems   = "Interface\\Icons\\INV_Misc_Book_09",
+  consumables  = "Interface\\Icons\\INV_Potion_54",
+  consumables_potions = "Interface\\Icons\\INV_Potion_54",
+  consumables_flask  = "Interface\\Icons\\INV_Potion_71",
+  consumables_food   = "Interface\\Icons\\INV_Misc_Food_15",
+  consumables_bandage= "Interface\\Icons\\INV_Misc_Bandage_01",
+  consumables_utility= "Interface\\Icons\\INV_Misc_Toy_02",
+  trinkets     = "Interface\\Icons\\INV_Jewelry_TrinketPVP_01",
+  classSpells  = "Interface\\Icons\\Ability_Marksmanship",
+  professions  = "Interface\\Icons\\Trade_BlackSmithing",
+  mounts       = "Interface\\Icons\\Ability_Mount_RidingHorse",
+  hearthstones = "Interface\\Icons\\INV_Misc_Rune_01",
+  macros       = "Interface\\Icons\\INV_Misc_QuestionMark",
 }
 
 function Placer:PromoteLastUsedChild(moduleName, children)
@@ -155,15 +173,15 @@ end
 
 function Placer:BuildDisplayItems(items)
   local display = {}
+  local ungrouped = {}
   -- Ordered map: module name -> flyout group (preserves priority insertion order)
   local groups = {}
-  local groupOrder = {}
 
   for _, item in ipairs(items) do
     local mod = item.module
     if not mod then
       -- Ungrouped item (shouldn't happen, but safe fallback)
-      table.insert(display, item)
+      table.insert(ungrouped, item)
     else
       if not groups[mod] then
         groups[mod] = {
@@ -173,34 +191,68 @@ function Placer:BuildDisplayItems(items)
           children = {},
           module = mod,
         }
-        table.insert(groupOrder, mod)
       end
       table.insert(groups[mod].children, item)
     end
   end
 
-  -- Build final display: one entry per module group
-  for _, mod in ipairs(groupOrder) do
-    local group = groups[mod]
-    local children = group.children
-
-    if #children == 1 then
-      -- Single item: no flyout needed, place directly
-      table.insert(display, children[1])
-    else
-      self:PromoteLastUsedChild(mod, children)
-
-      -- Multiple items: flyout group with first item as primary
-      local primary = children[1]
-      group.primary = primary
-      group.icon = primary.icon
-      group.itemID = primary.itemID
-      group.spellID = primary.spellID
-      group.toyID = primary.toyID
-      group.count = #children
-      group.name = (self.MODULE_LABELS[mod] or mod) .. " (" .. #children .. ")"
-      table.insert(display, group)
+  local priority = (BarSmith.GetExpandedPriority and BarSmith:GetExpandedPriority()) or BarSmith.chardb.priority or {}
+  local function isEnabled(modName)
+    if modName:match("^consumables_") then
+      return BarSmith.chardb.modules.consumables == true
     end
+    return BarSmith.chardb.modules[modName]
+  end
+
+  local function addPlaceholder(modName)
+    local label = self.MODULE_LABELS[modName] or modName
+    table.insert(display, {
+      name = label .. " (Empty)",
+      icon = self.MODULE_PLACEHOLDER_ICONS[modName],
+      type = "placeholder",
+      module = modName,
+      isPlaceholder = true,
+    })
+  end
+
+  -- Build final display: one entry per module group
+  for _, mod in ipairs(priority) do
+    local group = groups[mod]
+    if group then
+      local children = group.children
+
+      if #children == 1 then
+        -- Single item: no flyout needed, place directly
+        table.insert(display, children[1])
+      else
+        self:PromoteLastUsedChild(mod, children)
+
+        -- Multiple items: flyout group with first item as primary
+        local primary = children[1]
+        if mod == "macros" and primary and not primary.macrotext then
+          for _, child in ipairs(children) do
+            if child.macrotext then
+              primary = child
+              break
+            end
+          end
+        end
+        group.primary = primary
+        group.icon = primary.icon
+        group.itemID = primary.itemID
+        group.spellID = primary.spellID
+        group.toyID = primary.toyID
+        group.count = #children
+        group.name = (self.MODULE_LABELS[mod] or mod) .. " (" .. #children .. ")"
+        table.insert(display, group)
+      end
+    elseif isEnabled(mod) then
+      addPlaceholder(mod)
+    end
+  end
+
+  for _, item in ipairs(ungrouped) do
+    table.insert(display, item)
   end
 
   return display
