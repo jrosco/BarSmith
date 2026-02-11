@@ -56,6 +56,7 @@ function BarFrameSettings:BuildIncludeExcludeList()
   local includeUtilities = {}
   local includeMounts = {}
   local includeSpells = {}
+  local includeMacros = {}
   local excludeEntries = {}
 
   local chardb = BarSmith.chardb or {}
@@ -129,6 +130,16 @@ function BarFrameSettings:BuildIncludeExcludeList()
     addSpellEntry(includeSpells, spellID, { kind = "include_spell", spellID = spellID })
   end
 
+  local macroSlots = chardb.macros and chardb.macros.slots or {}
+  for slotIndex, entry in pairs(macroSlots) do
+    if entry and entry.macroID then
+      local name, icon = GetMacroInfo(entry.macroID)
+      local label = name or ("Macro " .. tostring(entry.macroID))
+      label = label .. " (Slot " .. tostring(slotIndex) .. ")"
+      addItem(includeMacros, label, icon, { kind = "include_macro", slotIndex = slotIndex })
+    end
+  end
+
   local exclude = chardb.exclude or {}
   for key, enabled in pairs(exclude) do
     if enabled and type(key) == "string" then
@@ -152,6 +163,7 @@ function BarFrameSettings:BuildIncludeExcludeList()
   addSection("Include: Utilities", includeUtilities, { 1.0, 0.65, 0.3 })
   addSection("Include: Mounts", includeMounts, { 0.5, 0.85, 0.6 })
   addSection("Include: Class Spells", includeSpells, { 0.5, 0.85, 1.0 })
+  addSection("Macros", includeMacros, { 0.95, 0.9, 0.5 })
   addSection("Exclude", excludeEntries, { 1.0, 0.35, 0.35 })
 
   return rows
@@ -367,6 +379,11 @@ function BarFrameSettings:UpdateIncludeExcludeFrame()
                 break
               end
             end
+          end
+        elseif data.kind == "include_macro" and data.slotIndex then
+          local macros = BarSmith.chardb and BarSmith.chardb.macros and BarSmith.chardb.macros.slots
+          if macros then
+            macros[data.slotIndex] = nil
           end
         elseif data.kind == "exclude" and data.key then
           BarSmith:RemoveFromExcludeByKey(data.key)

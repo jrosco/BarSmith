@@ -13,3 +13,4 @@ _G["BINDING_NAME_CLICK BarSmithModule_classSpells:LeftButton"] = "BarSmith Class
 _G["BINDING_NAME_CLICK BarSmithModule_professions:LeftButton"] = "BarSmith Professions"
 _G["BINDING_NAME_CLICK BarSmithModule_mounts:LeftButton"] = "BarSmith Mounts"
 _G["BINDING_NAME_CLICK BarSmithModule_hearthstones:LeftButton"] = "BarSmith Hearthstones"
+_G["BINDING_NAME_CLICK BarSmithModule_macros:LeftButton"] = "BarSmith Macros"
