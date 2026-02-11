@@ -2,7 +2,7 @@
 ## Title: BarSmith |cff8a5cf6Midnight|r
 ## Notes: Automatically fills action bar slots with quest items, consumables, trinkets, professions, mounts, hearthstones, and class spells.
 ## Author: jrosco
-## Version: 0.0.4
+## Version: 0.1.0
 ## SavedVariables: BarSmithDB
 ## SavedVariablesPerCharacter: BarSmithCharDB
 ## IconTexture: Interface\AddOns\BarSmith\Textures\bs
@@ -24,6 +24,7 @@ Modules\ClassSpells.lua
 Modules\Professions.lua
 Modules\Mounts.lua
 Modules\Hearthstones.lua
+Modules\Macros.lua
 Modules\BarFrameSettings.lua
 Modules\BarFrame.lua
 Modules\Minimap.lua

@@ -35,4 +35,7 @@
   <Binding name="CLICK BarSmithModule_hearthstones:LeftButton">
     -- Hearthstones
   </Binding>
+  <Binding name="CLICK BarSmithModule_macros:LeftButton">
+    -- Macros
+  </Binding>
 </Bindings>

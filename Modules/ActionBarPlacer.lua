@@ -84,6 +84,7 @@ function Placer:GatherItems()
     professions  = function() return BarSmith:GetModule("Professions"):GetItems() end,
     mounts       = function() return BarSmith:GetModule("Mounts"):GetItems() end,
     hearthstones = function() return BarSmith:GetModule("Hearthstones"):GetItems() end,
+    macros       = function() return BarSmith:GetModule("Macros"):GetItems() end,
   }
 
   local function isEnabled(modName)
@@ -130,6 +131,7 @@ Placer.MODULE_LABELS = {
   professions  = "Professions",
   mounts       = "Mounts",
   hearthstones = "Hearthstones",
+  macros       = "Macros",
 }
 
 function Placer:PromoteLastUsedChild(moduleName, children)
@@ -192,6 +194,14 @@ function Placer:BuildDisplayItems(items)
 
       -- Multiple items: flyout group with first item as primary
       local primary = children[1]
+      if mod == "macros" and primary and not primary.macrotext then
+        for _, child in ipairs(children) do
+          if child.macrotext then
+            primary = child
+            break
+          end
+        end
+      end
       group.primary = primary
       group.icon = primary.icon
       group.itemID = primary.itemID

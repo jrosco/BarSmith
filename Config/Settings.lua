@@ -91,6 +91,7 @@ function mod:Init()
     professions  = "Professions",
     mounts       = "Mounts",
     hearthstones = "Hearthstones",
+    macros       = "Macros",
   }
 
   for key, _ in pairs(moduleLabels) do
