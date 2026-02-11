@@ -1,4 +1,5 @@
 -- Keybinding labels (must use global strings with exact binding names)
+-- function BarFrame:EnsureModuleButtons() is responsible for creating these buttons with the correct names.
 BINDING_HEADER_BARSMITH = "BarSmith"
 _G["BINDING_NAME_CLICK BarSmithModule_questItems:LeftButton"] = "BarSmith Quest Items"
 _G["BINDING_NAME_CLICK BarSmithModule_consumables:LeftButton"] = "BarSmith Consumables"
