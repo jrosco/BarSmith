@@ -24,6 +24,59 @@ local FLYOUT_AUTO_CLOSE = 0.5 -- seconds before flyout auto-closes
 local AUTO_HIDE_ALPHA = 0
 local MOUSE_LEAVE_CHECK_DELAY = 1
 local DEFAULT_FONT_SCALE = 36
+local HOVER_HIT_INSET = BUTTON_PADDING
+local FLYOUT_SECURE_SHOW = [[
+  local count = self:GetAttribute("bs_flyout_count") or 0
+  if count <= 1 then return end
+  for i = 1, count do
+    local child = self:GetFrameRef("bs_flyout" .. i)
+    if child then
+      child:Show()
+    end
+  end
+]]
+local FLYOUT_SECURE_HIDE = [[
+  local count = self:GetAttribute("bs_flyout_count") or 0
+  if count <= 1 then return end
+  if self:IsUnderMouse(true) then return end
+  for i = 1, count do
+    local child = self:GetFrameRef("bs_flyout" .. i)
+    if child and child:IsUnderMouse(true) then return end
+  end
+  for i = 1, count do
+    local child = self:GetFrameRef("bs_flyout" .. i)
+    if child then
+      child:Hide()
+    end
+  end
+]]
+local FLYOUT_SECURE_SHOW_CHILD = [[
+  local owner = control
+  local count = owner:GetAttribute("bs_flyout_count") or 0
+  if count <= 1 then return end
+  for i = 1, count do
+    local child = owner:GetFrameRef("bs_flyout" .. i)
+    if child then
+      child:Show()
+    end
+  end
+]]
+local FLYOUT_SECURE_HIDE_CHILD = [[
+  local owner = control
+  local count = owner:GetAttribute("bs_flyout_count") or 0
+  if count <= 1 then return end
+  if owner:IsUnderMouse(true) then return end
+  for i = 1, count do
+    local child = owner:GetFrameRef("bs_flyout" .. i)
+    if child and child:IsUnderMouse(true) then return end
+  end
+  for i = 1, count do
+    local child = owner:GetFrameRef("bs_flyout" .. i)
+    if child then
+      child:Hide()
+    end
+  end
+]]
 
 local function IsSettingsClick(button)
   return button == "RightButton" and IsShiftKeyDown()
@@ -112,6 +165,7 @@ function BarFrame:Init()
 
   -- Create the button pool
   self.buttons = {}
+  self.secureFlyoutHover = true
   local configuredMax = self:GetMaxButtons()
   for i = 1, configuredMax do
     self.buttons[i] = self:CreateButton(i)
@@ -337,11 +391,12 @@ end
 
 function BarFrame:CreateButton(index)
   local btnName = "BarSmithButton" .. index
-  local btn = CreateFrame("Button", btnName, self.frame, "SecureActionButtonTemplate")
+  local btn = CreateFrame("Button", btnName, self.frame, "SecureActionButtonTemplate,SecureHandlerEnterLeaveTemplate")
 
   local buttonSize = self:GetButtonSize()
   btn:SetSize(buttonSize, buttonSize)
   btn:RegisterForClicks("AnyUp", "AnyDown")
+  btn:SetHitRectInsets(-HOVER_HIT_INSET, -HOVER_HIT_INSET, -HOVER_HIT_INSET, -HOVER_HIT_INSET)
 
   -- Custom fields
   btn.index = index
@@ -389,6 +444,8 @@ function BarFrame:CreateButton(index)
   btn.flyoutOpen = false
   self:CreateFlyoutButtons(btn)
 
+  btn:SetAttribute("bs_flyout_count", 0)
+
   -- Tooltip and flyout hover tracking
   btn:SetScript("OnEnter", function(b)
     self:NotifyMouseEnter()
@@ -410,6 +467,9 @@ function BarFrame:CreateButton(index)
   btn:SetScript("OnReceiveDrag", function(b)
     self:HandleReceiveDrag(b)
   end)
+
+  SecureHandlerWrapScript(btn, "OnEnter", btn, FLYOUT_SECURE_SHOW)
+  SecureHandlerWrapScript(btn, "OnLeave", btn, FLYOUT_SECURE_HIDE)
 
   -- HookScript preserves ActionButtonTemplate's existing OnMouseUp handler
   btn:HookScript("OnMouseUp", function(b, button)
@@ -438,6 +498,7 @@ function BarFrame:CreateFlyoutButtons(parentBtn)
     local buttonSize = self:GetButtonSize()
     child:SetSize(buttonSize, buttonSize)
     child:RegisterForClicks("AnyUp", "AnyDown")
+    child:SetHitRectInsets(-HOVER_HIT_INSET, -HOVER_HIT_INSET, -HOVER_HIT_INSET, -HOVER_HIT_INSET)
 
     child:SetPushedTexture("Interface\\Buttons\\UI-Quickslot-Depress")
     child:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
@@ -488,6 +549,9 @@ function BarFrame:CreateFlyoutButtons(parentBtn)
       -- No timer restart here; OnLeave handles it when mouse actually leaves
     end)
 
+    SecureHandlerWrapScript(child, "OnEnter", parentBtn, FLYOUT_SECURE_SHOW_CHILD)
+    SecureHandlerWrapScript(child, "OnLeave", parentBtn, FLYOUT_SECURE_HIDE_CHILD)
+    parentBtn:SetFrameRef("bs_flyout" .. i, child)
     child:Hide()
     table.insert(parentBtn.flyoutButtons, child)
   end
@@ -661,6 +725,9 @@ function BarFrame:SetFlyoutItems(btn, children)
   btn.flyoutOpen = false
 
   local childCount = children and #children or 0
+  if not InCombatLockdown() then
+    btn:SetAttribute("bs_flyout_count", childCount)
+  end
   if childCount > 1 then
     btn.flyoutIndicator:SetText("+" .. (childCount - 1))
   else
@@ -707,9 +774,38 @@ function BarFrame:SetFlyoutItems(btn, children)
       childBtn:Hide()
     end
   end
+
+  self:UpdateFlyoutPositions(btn)
+end
+
+function BarFrame:UpdateFlyoutPositions(btn)
+  if not btn or InCombatLockdown() then return end
+
+  local topLevel = self.frame:GetFrameLevel() + 50
+  local direction = self:GetFlyoutDirection()
+  local buttonSize = self:GetButtonSize()
+
+  for i, childBtn in ipairs(btn.flyoutButtons or {}) do
+    local offset = BUTTON_PADDING + ((i - 1) * (buttonSize + BUTTON_PADDING))
+    childBtn:SetFrameLevel(topLevel + i)
+    childBtn:ClearAllPoints()
+    if direction == "TOP" then
+      childBtn:SetPoint("BOTTOM", btn, "TOP", 0, offset)
+    elseif direction == "BOTTOM" then
+      childBtn:SetPoint("TOP", btn, "BOTTOM", 0, -offset)
+    elseif direction == "LEFT" then
+      childBtn:SetPoint("RIGHT", btn, "LEFT", -offset, 0)
+    else
+      childBtn:SetPoint("LEFT", btn, "RIGHT", offset, 0)
+    end
+    childBtn:SetSize(buttonSize, buttonSize)
+  end
 end
 
 function BarFrame:StartAutoCloseTimer()
+  if self.secureFlyoutHover then
+    return
+  end
   self:CancelAutoCloseTimer()
   self._flyoutAutoCloseTimer = C_Timer.NewTimer(FLYOUT_AUTO_CLOSE, function()
     self._flyoutAutoCloseTimer = nil
@@ -824,6 +920,7 @@ end
 -- When a flyout child button is clicked, promote that child to be the new primary for the parent group.
 function BarFrame:PromoteChildAsPrimary(parentBtn, childData)
   if not parentBtn or not childData then return end
+  if InCombatLockdown() then return end
   if not parentBtn.groupData or not parentBtn.flyoutItems or #parentBtn.flyoutItems <= 1 then
     return
   end
@@ -875,27 +972,11 @@ function BarFrame:ShowFlyout(btn)
   self:HideAllFlyouts(btn)
   btn.flyoutOpen = true
 
-  -- Raise flyout children above all main buttons so they receive clicks
-  local topLevel = self.frame:GetFrameLevel() + 50
-  local direction = self:GetFlyoutDirection()
-  local buttonSize = self:GetButtonSize()
+  self:UpdateFlyoutPositions(btn)
 
   for i, childBtn in ipairs(btn.flyoutButtons or {}) do
     local childData = btn.flyoutItems[i]
     if childData then
-      local offset = BUTTON_PADDING + ((i - 1) * (buttonSize + BUTTON_PADDING))
-      childBtn:SetFrameLevel(topLevel + i)
-      childBtn:ClearAllPoints()
-      if direction == "TOP" then
-        childBtn:SetPoint("BOTTOM", btn, "TOP", 0, offset)
-      elseif direction == "BOTTOM" then
-        childBtn:SetPoint("TOP", btn, "BOTTOM", 0, -offset)
-      elseif direction == "LEFT" then
-        childBtn:SetPoint("RIGHT", btn, "LEFT", -offset, 0)
-      else       -- RIGHT
-        childBtn:SetPoint("LEFT", btn, "RIGHT", offset, 0)
-      end
-      childBtn:SetSize(buttonSize, buttonSize)
       childBtn:Show()
     else
       childBtn:Hide()
@@ -1091,6 +1172,7 @@ function BarFrame:UpdateLayout()
     local y = -(BAR_PADDING + (row * (buttonSize + BUTTON_PADDING)))
     btn:SetPoint("TOPLEFT", self.frame, "TOPLEFT", x, y)
     btn:SetSize(buttonSize, buttonSize)
+    self:UpdateFlyoutPositions(btn)
   end
 
   self:UpdateButtonFontSizes()
@@ -1138,23 +1220,21 @@ function BarFrame:UpdateCooldowns()
   local function updateButtonCooldown(btn)
     if not btn:IsShown() or not btn.itemData then return end
 
-    local start, duration, enable = 0, 0, 1
     local data = btn.itemData
+    local durationObject
+    local start, duration, enable = 0, 0, 1
 
     if data.spellID then
-      local info = C_Spell.GetSpellCooldown(data.spellID)
-      if info then
-        start = info.startTime or 0
-        duration = info.duration or 0
-        enable = info.isEnabled and 1 or 0
-      end
+      durationObject = C_Spell.GetSpellCooldownDuration(data.spellID)
     elseif data.itemID then
       start, duration, enable = C_Item.GetItemCooldown(data.itemID)
     elseif data.toyID then
       start, duration, enable = C_Item.GetItemCooldown(data.toyID)
     end
 
-    if btn.cooldown and duration and duration > 0 then
+    if btn.cooldown and durationObject then
+      btn.cooldown:SetCooldownFromDurationObject(durationObject)
+    elseif btn.cooldown and duration and duration > 0 then
       CooldownFrame_Set(btn.cooldown, start, duration, enable)
     elseif btn.cooldown then
       btn.cooldown:Clear()
@@ -1163,8 +1243,8 @@ function BarFrame:UpdateCooldowns()
 
   for _, btn in ipairs(self.buttons) do
     updateButtonCooldown(btn)
-    if btn.flyoutOpen then
-      for _, childBtn in ipairs(btn.flyoutButtons or {}) do
+    for _, childBtn in ipairs(btn.flyoutButtons or {}) do
+      if childBtn:IsShown() then
         updateButtonCooldown(childBtn)
       end
     end
@@ -1187,10 +1267,19 @@ function BarFrame:UpdateRangeIndicators()
       if rangeResult == 0 then
         inRange = false
       end
-    elseif data.itemID and IsItemInRange then
-      local rangeResult = IsItemInRange(data.itemID, "target")
-      if rangeResult == false then
-        inRange = false
+    elseif data.itemID then
+      if UnitExists("target") and not InCombatLockdown() then
+        if C_Item and C_Item.IsItemInRange then
+          local rangeResult = C_Item.IsItemInRange(data.itemID, "target")
+          if rangeResult == false then
+            inRange = false
+          end
+        elseif IsItemInRange then
+          local rangeResult = IsItemInRange(data.itemID, "target")
+          if rangeResult == false then
+            inRange = false
+          end
+        end
       end
     end
 
@@ -1206,8 +1295,8 @@ function BarFrame:UpdateRangeIndicators()
 
   for _, btn in ipairs(self.buttons) do
     updateRange(btn)
-    if btn.flyoutOpen then
-      for _, childBtn in ipairs(btn.flyoutButtons or {}) do
+    for _, childBtn in ipairs(btn.flyoutButtons or {}) do
+      if childBtn:IsShown() then
         updateRange(childBtn)
       end
     end
