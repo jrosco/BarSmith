@@ -1137,23 +1137,21 @@ function BarFrame:UpdateCooldowns()
   local function updateButtonCooldown(btn)
     if not btn:IsShown() or not btn.itemData then return end
 
-    local start, duration, enable = 0, 0, 1
     local data = btn.itemData
+    local durationObject
+    local start, duration, enable = 0, 0, 1
 
     if data.spellID then
-      local info = C_Spell.GetSpellCooldown(data.spellID)
-      if info then
-        start = info.startTime or 0
-        duration = info.duration or 0
-        enable = info.isEnabled and 1 or 0
-      end
+      durationObject = C_Spell.GetSpellCooldownDuration(data.spellID)
     elseif data.itemID then
       start, duration, enable = C_Item.GetItemCooldown(data.itemID)
     elseif data.toyID then
       start, duration, enable = C_Item.GetItemCooldown(data.toyID)
     end
 
-    if btn.cooldown and duration and duration > 0 then
+    if btn.cooldown and durationObject then
+      btn.cooldown:SetCooldownFromDurationObject(durationObject)
+    elseif btn.cooldown and duration and duration > 0 then
       CooldownFrame_Set(btn.cooldown, start, duration, enable)
     elseif btn.cooldown then
       btn.cooldown:Clear()
@@ -1186,10 +1184,19 @@ function BarFrame:UpdateRangeIndicators()
       if rangeResult == 0 then
         inRange = false
       end
-    elseif data.itemID and IsItemInRange then
-      local rangeResult = IsItemInRange(data.itemID, "target")
-      if rangeResult == false then
-        inRange = false
+    elseif data.itemID then
+      if UnitExists("target") and not InCombatLockdown() then
+        if C_Item and C_Item.IsItemInRange then
+          local rangeResult = C_Item.IsItemInRange(data.itemID, "target")
+          if rangeResult == false then
+            inRange = false
+          end
+        elseif IsItemInRange then
+          local rangeResult = IsItemInRange(data.itemID, "target")
+          if rangeResult == false then
+            inRange = false
+          end
+        end
       end
     end
 
