@@ -247,6 +247,7 @@ function Placer:BuildDisplayItems(items)
         table.insert(display, group)
       end
     elseif isEnabled(mod) then
+      -- Module enabled but no items: add a placeholder to show the module is active but empty
       addPlaceholder(mod)
     end
   end
