@@ -26,6 +26,17 @@ BarSmith.DEFAULTS = {
     flyoutDirection = "TOP",          -- TOP, BOTTOM, LEFT, RIGHT
     barPosition = nil,                -- saved {point, relPoint, x, y}
 
+    -- QuickBar (separate quick-access bar)
+    quickBar = {
+      enabled = true,
+      iconSize = 32,
+      columns = 6,
+      alpha = 1,
+      showBackdrop = true,
+      position = nil, -- {x, y} in UIParent space
+      slots = {}, -- [index] = item data
+    },
+
     -- Module toggles
     modules = {
       questItems   = true,

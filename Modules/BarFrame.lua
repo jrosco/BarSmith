@@ -25,6 +25,7 @@ local AUTO_HIDE_ALPHA = 0
 local MOUSE_LEAVE_CHECK_DELAY = 1
 local DEFAULT_FONT_SCALE = 36
 local HOVER_HIT_INSET = BUTTON_PADDING
+local TOOLTIP_ICON = "|TInterface\\AddOns\\BarSmith\\Textures\\bs:14:14:0:0|t"
 local FLYOUT_SECURE_SHOW = [[
   local count = self:GetAttribute("bs_flyout_count") or 0
   if count <= 1 then return end
@@ -80,6 +81,10 @@ local FLYOUT_SECURE_HIDE_CHILD = [[
 
 local function IsSettingsClick(button)
   return button == "RightButton" and IsShiftKeyDown()
+end
+
+local function IsQuickBarAddClick(button)
+  return button == "RightButton" and IsAltKeyDown()
 end
 
 
@@ -299,6 +304,7 @@ function BarFrame:GetConfiguredAlpha()
   return math.max(0.1, math.min(1, alpha))
 end
 
+
 function BarFrame:UpdateBackdropVisibility()
   if not self.frame then return end
 
@@ -347,6 +353,7 @@ function BarFrame:CancelMouseLeaveCheck()
     self._mouseLeaveCheckTimer = nil
   end
 end
+
 
 function BarFrame:StartMouseLeaveCheck()
   self:CancelMouseLeaveCheck()
@@ -480,8 +487,18 @@ function BarFrame:CreateButton(index)
       end
       return
     end
+    if IsQuickBarAddClick(button) and b.itemData then
+      local quickBar = BarSmith:GetModule("QuickBar")
+      if quickBar and quickBar.AddFromItemData then
+        quickBar:AddFromItemData(b.itemData)
+      end
+      return
+    end
   end)
   btn:HookScript("PostClick", function(b, button)
+    if button == "RightButton" and IsAltKeyDown() then
+      return
+    end
     self:HandleButtonPostClick(b, button)
   end)
 
@@ -535,15 +552,23 @@ function BarFrame:CreateFlyoutButtons(parentBtn)
     child:SetScript("OnReceiveDrag", function(b)
       self:HandleReceiveDrag(b)
     end)
-    child:HookScript("OnMouseUp", function(_, button)
+    child:HookScript("OnMouseUp", function(b, button)
       if IsSettingsClick(button) then
         local settings = BarSmith:GetModule("BarFrameSettings")
         if settings and settings.ToggleIncludeExcludeFrame then
           settings:ToggleIncludeExcludeFrame(parentBtn)
         end
+      elseif IsQuickBarAddClick(button) and b and b.itemData then
+        local quickBar = BarSmith:GetModule("QuickBar")
+        if quickBar and quickBar.AddFromItemData then
+          quickBar:AddFromItemData(b.itemData)
+        end
       end
     end)
     child:SetScript("PostClick", function(b, button)
+      if button == "RightButton" and IsAltKeyDown() then
+        return
+      end
       self:HandleButtonPostClick(b, button)
       self:PromoteChildAsPrimary(b.parentButton, b.itemData)
       -- No timer restart here; OnLeave handles it when mouse actually leaves
@@ -577,10 +602,14 @@ function BarFrame:SetButtonAction(btn, data, clickButton)
   btn:SetAttribute("spell2", nil)
   btn:SetAttribute("item2", nil)
   btn:SetAttribute("toy2", nil)
+  btn:SetAttribute("alt-type", nil)
+  btn:SetAttribute("alt-macrotext", nil)
   btn:SetAttribute("alt-type1", nil)
   btn:SetAttribute("alt-macrotext1", nil)
   btn:SetAttribute("shift-type2", nil)
   btn:SetAttribute("shift-macrotext2", nil)
+  btn:SetAttribute("alt-type2", nil)
+  btn:SetAttribute("alt-macrotext2", nil)
   btn:SetAttribute("macrotext2", nil)
   btn:SetAttribute("alt-type1", nil)
   btn:SetAttribute("alt-macrotext1", nil)
@@ -598,8 +627,12 @@ function BarFrame:SetButtonAction(btn, data, clickButton)
     btn:SetAttribute("type" .. attrPrefix, "macro")
     btn:SetAttribute("macrotext" .. attrPrefix, data.macrotext)
     -- Reserve modified clicks for menu/exclude without triggering the macro.
+    btn:SetAttribute("alt-type", "macro")
+    btn:SetAttribute("alt-macrotext", "/stopmacro")
     btn:SetAttribute("alt-type1", "macro")
     btn:SetAttribute("alt-macrotext1", "/stopmacro")
+    btn:SetAttribute("alt-type2", "macro")
+    btn:SetAttribute("alt-macrotext2", "/stopmacro")
     btn:SetAttribute("shift-type2", "macro")
     btn:SetAttribute("shift-macrotext2", "/stopmacro")
     return
@@ -630,8 +663,12 @@ function BarFrame:SetButtonAction(btn, data, clickButton)
   end
 
   -- Reserve modified clicks for menu/exclude without triggering the action.
+  btn:SetAttribute("alt-type", "macro")
+  btn:SetAttribute("alt-macrotext", "/stopmacro")
   btn:SetAttribute("alt-type1", "macro")
   btn:SetAttribute("alt-macrotext1", "/stopmacro")
+  btn:SetAttribute("alt-type2", "macro")
+  btn:SetAttribute("alt-macrotext2", "/stopmacro")
   btn:SetAttribute("shift-type2", "macro")
   btn:SetAttribute("shift-macrotext2", "/stopmacro")
 end
@@ -1356,20 +1393,21 @@ function BarFrame:ShowButtonTooltip(btn)
     if typeColor then
       r, g, b = unpack(typeColor)
     end
-    GameTooltip:AddLine("|cff33ccff[BarSmith]|r " .. typeLabel, r, g, b)
+    GameTooltip:AddLine(TOOLTIP_ICON .. " |cff33ccff[BarSmith]|r " .. typeLabel, r, g, b)
   else
-    GameTooltip:AddLine("|cff33ccff[BarSmith]|r", 0.5, 0.5, 0.5)
+    GameTooltip:AddLine(TOOLTIP_ICON .. " |cff33ccff[BarSmith]|r", 0.5, 0.5, 0.5)
   end
   if btn.flyoutItems and #btn.flyoutItems > 1 then
-    GameTooltip:AddLine("Shift-Right-click to open menu", 0.8, 0.8, 0.8)
+    GameTooltip:AddLine("Shift-Right-click to Open Menu", 0.8, 0.8, 0.8)
     -- local groupLabel = (btn.groupData and btn.groupData.name) or (#btn.flyoutItems .. " items")
     -- GameTooltip:AddLine(groupLabel, 0.8, 0.8, 0.8)
   end
-  GameTooltip:AddLine("Alt-Left-click to exclude", 0.8, 0.8, 0.8)
+  GameTooltip:AddLine("Alt-Right-click to add to QuickBar", 0.8, 0.8, 0.8)
+  GameTooltip:AddLine("Alt-Left-click to Exclude", 0.8, 0.8, 0.8)
   if data.type == "macro" then
     GameTooltip:AddLine("Drag a macro to assign it to this slot", 0.8, 0.8, 0.8)
   else
-    GameTooltip:AddLine("Drag a consumable, mount, or spell to include (clears exclude)", 0.8, 0.8, 0.8)
+    GameTooltip:AddLine("Drag a Consumable, Mount, or Spell to include (clears from exclude)", 0.8, 0.8, 0.8)
   end
   GameTooltip:Show()
 end

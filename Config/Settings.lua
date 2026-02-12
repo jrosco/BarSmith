@@ -68,6 +68,11 @@ function mod:Init()
   settingsProxy["BarSmith_ShowBackdrop"]      = (BarSmith.chardb.barShowBackdrop ~= false)
   settingsProxy["BarSmith_AutoHideMouseover"] = (BarSmith.chardb.barAutoHideMouseover == true)
   settingsProxy["BarSmith_FlyoutDirection"]   = BarSmith.chardb.flyoutDirection or "TOP"
+  settingsProxy["BarSmith_QB_Enabled"]        = (BarSmith.chardb.quickBar.enabled ~= false)
+  settingsProxy["BarSmith_QB_IconSize"]       = BarSmith.chardb.quickBar.iconSize or 32
+  settingsProxy["BarSmith_QB_Columns"]        = BarSmith.chardb.quickBar.columns or 6
+  settingsProxy["BarSmith_QB_Alpha"]          = BarSmith.chardb.quickBar.alpha or 1
+  settingsProxy["BarSmith_QB_ShowBackdrop"]   = (BarSmith.chardb.quickBar.showBackdrop ~= false)
   settingsProxy["BarSmith_Mounts_Random"]     = BarSmith.chardb.mounts.randomMount
   settingsProxy["BarSmith_Mounts_TopFavs"]    = BarSmith.chardb.mounts.topFavorites
   settingsProxy["BarSmith_Debug"]             = BarSmith.db.debug
@@ -259,6 +264,88 @@ function mod:Init()
       end
     end)
     Settings.CreateDropdown(category, setting, BuildDirectionDropdownOptions, tooltip)
+  end
+
+  ---------- QuickBar ----------
+  layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("QuickBar"))
+
+  -- Enable QuickBar
+  do
+    local variable = "BarSmith_QB_Enabled"
+    local name = "Enable QuickBar"
+    local tooltip = "Enable the dedicated QuickBar toggle."
+    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, true)
+    Settings.SetOnValueChangedCallback(variable, function(_, _, val)
+      BarSmith.chardb.quickBar.enabled = (val == true)
+    end)
+    Settings.CreateCheckbox(category, setting, tooltip)
+  end
+
+  -- QuickBar columns
+  do
+    local variable = "BarSmith_QB_Columns"
+    local name = "QuickBar Columns"
+    local tooltip = "Number of buttons per row on the QuickBar."
+    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "number", name, 6)
+    Settings.SetOnValueChangedCallback(variable, function(_, _, val)
+      BarSmith.chardb.quickBar.columns = math.max(1, math.min(12, val))
+      local quickBar = BarSmith:GetModule("QuickBar")
+      if quickBar then
+        quickBar:UpdateLayout()
+      end
+    end)
+    local options = Settings.CreateSliderOptions(1, 12, 1)
+    Settings.CreateSlider(category, setting, options, tooltip)
+  end
+
+  -- QuickBar icon size
+  do
+    local variable = "BarSmith_QB_IconSize"
+    local name = "QuickBar Icon Size"
+    local tooltip = "Button/icon size in pixels for the QuickBar."
+    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "number", name, 32)
+    Settings.SetOnValueChangedCallback(variable, function(_, _, val)
+      BarSmith.chardb.quickBar.iconSize = math.max(24, math.min(64, val))
+      local quickBar = BarSmith:GetModule("QuickBar")
+      if quickBar then
+        quickBar:UpdateLayout()
+      end
+    end)
+    local options = Settings.CreateSliderOptions(24, 64, 1)
+    Settings.CreateSlider(category, setting, options, tooltip)
+  end
+
+  -- QuickBar alpha
+  do
+    local variable = "BarSmith_QB_Alpha"
+    local name = "QuickBar Alpha"
+    local tooltip = "Adjust the transparency of the QuickBar."
+    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "number", name, 1)
+    Settings.SetOnValueChangedCallback(variable, function(_, _, val)
+      BarSmith.chardb.quickBar.alpha = math.max(0.1, math.min(1, val))
+      local quickBar = BarSmith:GetModule("QuickBar")
+      if quickBar then
+        quickBar:UpdateBackdropVisibility()
+      end
+    end)
+    local options = Settings.CreateSliderOptions(0.1, 1, 0.05)
+    Settings.CreateSlider(category, setting, options, tooltip)
+  end
+
+  -- QuickBar backdrop
+  do
+    local variable = "BarSmith_QB_ShowBackdrop"
+    local name = "QuickBar Background"
+    local tooltip = "Show or hide the QuickBar background and border."
+    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, true)
+    Settings.SetOnValueChangedCallback(variable, function(_, _, val)
+      BarSmith.chardb.quickBar.showBackdrop = (val == true)
+      local quickBar = BarSmith:GetModule("QuickBar")
+      if quickBar then
+        quickBar:UpdateBackdropVisibility()
+      end
+    end)
+    Settings.CreateCheckbox(category, setting, tooltip)
   end
 
   ---------- Modules ----------
