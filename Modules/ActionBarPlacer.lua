@@ -136,7 +136,7 @@ Placer.MODULE_LABELS = {
 
 Placer.MODULE_PLACEHOLDER_ICONS = {
   questItems   = "Interface\\Icons\\INV_Misc_Book_09",
-  consumables  = "Interface\\Icons\\INV_Potion_54",
+  consumables  = 5931169,
   consumables_potions = "Interface\\Icons\\INV_Potion_54",
   consumables_flask  = "Interface\\Icons\\INV_Potion_71",
   consumables_food   = "Interface\\Icons\\INV_Misc_Food_15",
