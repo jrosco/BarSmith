@@ -13,6 +13,8 @@
 Core.lua
 Bindings.lua
 Config\Defaults.lua
+Config\SettingsButtons.lua
+Config\SettingsButtons.xml
 Config\Settings.lua
 
 # Modules (load order matters)

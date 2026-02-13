@@ -1,0 +1,22 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+  <Frame name="BarSmithSettingsButtonTemplate" virtual="true" mixin="BarSmithSettingsButtonMixin">
+    <Size x="600" y="32"/>
+    <Layers>
+      <Layer level="ARTWORK">
+        <FontString name="$parentLabel" parentKey="Label" inherits="GameFontNormal">
+          <Anchors>
+            <Anchor point="LEFT" x="12" y="0"/>
+          </Anchors>
+        </FontString>
+      </Layer>
+    </Layers>
+    <Frames>
+      <Button name="$parentButton" parentKey="Button" inherits="UIPanelButtonTemplate">
+        <Size x="200" y="22"/>
+        <Anchors>
+          <Anchor point="RIGHT" x="-10" y="0"/>
+        </Anchors>
+      </Button>
+    </Frames>
+  </Frame>
+</Ui>

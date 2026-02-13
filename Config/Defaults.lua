@@ -30,7 +30,7 @@ BarSmith.DEFAULTS = {
     quickBar = {
       enabled = true,
       iconSize = 32,
-      columns = 6,
+      columns = 8,
       alpha = 1,
       showBackdrop = true,
       position = nil, -- {x, y} in UIParent space
@@ -75,6 +75,13 @@ BarSmith.DEFAULTS = {
       utilities     = true,
       currentExpansionOnly = false,
       split = {
+        potions       = false,
+        flasks        = false,
+        food          = false,
+        bandages      = false,
+        utilities     = false,
+      },
+      splitCurrentExpansion = {
         potions       = false,
         flasks        = false,
         food          = false,
@@ -196,6 +203,41 @@ function BarSmith:ResetCharacterSettings()
   BarSmithCharDB = CopyTable(self.DEFAULTS.char)
   self.chardb = BarSmithCharDB
   self:Print("Character settings reset to defaults.")
+  self:FireCallback("SETTINGS_CHANGED")
+end
+
+function BarSmith:ResetCharacterSettingsKeepLists()
+  local chardb = self.chardb or {}
+  local keepExclude = chardb.exclude and CopyTable(chardb.exclude) or nil
+  local keepConsumableInclude = chardb.consumables and chardb.consumables.include
+    and CopyTable(chardb.consumables.include) or nil
+  local keepMountInclude = chardb.mounts and chardb.mounts.include
+    and CopyTable(chardb.mounts.include) or nil
+  local keepClassSpells = chardb.classSpells and chardb.classSpells.customSpellIDs
+    and CopyTable(chardb.classSpells.customSpellIDs) or nil
+  local keepMacroSlots = chardb.macros and chardb.macros.slots
+    and CopyTable(chardb.macros.slots) or nil
+
+  BarSmithCharDB = CopyTable(self.DEFAULTS.char)
+  self.chardb = BarSmithCharDB
+
+  if keepExclude then
+    self.chardb.exclude = keepExclude
+  end
+  if keepConsumableInclude then
+    self.chardb.consumables.include = keepConsumableInclude
+  end
+  if keepMountInclude then
+    self.chardb.mounts.include = keepMountInclude
+  end
+  if keepClassSpells then
+    self.chardb.classSpells.customSpellIDs = keepClassSpells
+  end
+  if keepMacroSlots then
+    self.chardb.macros.slots = keepMacroSlots
+  end
+
+  self:Print("Settings reset (includes/excludes preserved).")
   self:FireCallback("SETTINGS_CHANGED")
 end
 
