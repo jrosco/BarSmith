@@ -68,6 +68,7 @@ function QuickBar:Init()
     self.buttons[i] = self:CreateButton(i)
   end
 
+  self:SeedDefaultSlots()
   self:UpdateLayout()
 
   self.frame:HookScript("OnEnter", function()
@@ -302,6 +303,10 @@ function QuickBar:ShowAtCursor()
     BarSmith:Print("QuickBar is disabled.")
     return
   end
+  if self:GetActiveCount() <= 0 then
+    BarSmith:Print("QuickBar is empty. Alt-Right-click an item/spell on the BarSmith bar to add it.")
+    return
+  end
   if InCombatLockdown() then
     self:RestorePosition()
   else
@@ -359,6 +364,86 @@ local function GetQuickBarKey(data)
     return "macrotext:" .. tostring(data.macrotext)
   end
   return nil
+end
+
+function QuickBar:SeedDefaultSlots()
+  local cfg = self:GetConfig()
+  if cfg.seededDefaults then
+    return
+  end
+
+  cfg.slots = cfg.slots or {}
+  if self:GetActiveCount() > 0 then
+    cfg.seededDefaults = true
+    return
+  end
+
+  local defaults = {}
+
+  local function addFirstItem(modName, picker)
+    local mod = BarSmith:GetModule(modName)
+    if not mod or not mod.GetItems then
+      return
+    end
+    local ok, items = pcall(mod.GetItems, mod)
+    if not ok or type(items) ~= "table" or #items == 0 then
+      return
+    end
+    local chosen = picker and picker(items) or items[1]
+    if chosen then
+      table.insert(defaults, chosen)
+    end
+  end
+
+  -- Main Hearthstone
+  addFirstItem("Hearthstones")
+
+  -- Main Consumable
+  addFirstItem("Consumables")
+
+  -- Main Trinket
+  addFirstItem("Trinkets")
+
+  -- Main Mount (Random Favorite if available)
+  addFirstItem("Mounts", function(items)
+    local mountMod = BarSmith:GetModule("Mounts")
+    local randomSpellID = mountMod and mountMod.RANDOM_FAVORITE_MOUNT
+    if randomSpellID then
+      for _, item in ipairs(items) do
+        if item.spellID == randomSpellID then
+          return item
+        end
+      end
+    end
+    return items[1]
+  end)
+
+  -- Main Class Spell
+  addFirstItem("ClassSpells")
+
+  local function hasKey(key)
+    if not key then return false end
+    for _, entry in ipairs(cfg.slots) do
+      if GetQuickBarKey(entry) == key then
+        return true
+      end
+    end
+    return false
+  end
+
+  for _, data in ipairs(defaults) do
+    local key = GetQuickBarKey(data)
+    if not hasKey(key) then
+      for i = 1, MAX_QUICKBAR_BUTTONS do
+        if not cfg.slots[i] then
+          cfg.slots[i] = CopyQuickBarData(data)
+          break
+        end
+      end
+    end
+  end
+
+  cfg.seededDefaults = true
 end
 
 function QuickBar:CompactSlots()
