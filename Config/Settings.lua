@@ -35,6 +35,8 @@ end
 ------------------------------------------------------------------------
 
 local settingsProxy = {}
+local defaultsChar = BarSmith.DEFAULTS and BarSmith.DEFAULTS.char or {}
+local defaultsGlobal = BarSmith.DEFAULTS and BarSmith.DEFAULTS.global or {}
 
 local function BuildDirectionDropdownOptions()
   local container = Settings.CreateControlTextContainer()
@@ -111,7 +113,8 @@ function mod:Init()
     local variable = "BarSmith_Enabled"
     local name = "Enable BarSmith"
     local tooltip = "Toggle the addon on or off for this character."
-    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, true)
+    local defaultValue = defaultsChar.enabled ~= false
+    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       BarSmith.chardb.enabled = val
       BarSmith:FireCallback("SETTINGS_CHANGED")
@@ -124,7 +127,8 @@ function mod:Init()
     local variable = "BarSmith_AutoFill"
     local name = "Auto-Fill on Login/Zone Change"
     local tooltip = "Automatically scan and place items when you log in, change zones, or update your bags."
-    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, true)
+    local defaultValue = defaultsChar.autoFill == true
+    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       BarSmith.chardb.autoFill = val
     end)
@@ -136,7 +140,8 @@ function mod:Init()
     local variable = "BarSmith_Confirm"
     local name = "Confirm Before Placing"
     local tooltip = "Show a confirmation popup before items are placed on the bar."
-    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, false)
+    local defaultValue = defaultsChar.confirmBeforeFill == true
+    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       BarSmith.chardb.confirmBeforeFill = val
     end)
@@ -151,7 +156,8 @@ function mod:Init()
     local variable = "BarSmith_Locked"
     local name = "Lock Bar Position"
     local tooltip = "When locked, the bar cannot be dragged. Unlock with /bs lock."
-    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, true)
+    local defaultValue = defaultsChar.barLocked == true
+    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       local barFrame = BarSmith:GetModule("BarFrame")
       if barFrame then
@@ -166,7 +172,8 @@ function mod:Init()
     local variable = "BarSmith_Columns"
     local name = "Buttons Per Row"
     local tooltip = "Number of buttons per row on the BarSmith bar."
-    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "number", name, 12)
+    local defaultValue = defaultsChar.barColumns or 12
+    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "number", name, defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       BarSmith.chardb.barColumns = math.max(1, math.min(12, val))
       local barFrame = BarSmith:GetModule("BarFrame")
@@ -183,7 +190,8 @@ function mod:Init()
     local variable = "BarSmith_IconSize"
     local name = "Button Icon Size"
     local tooltip = "Size of BarSmith buttons/icons in pixels."
-    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "number", name, 37)
+    local defaultValue = defaultsChar.barIconSize or 36
+    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "number", name, defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       BarSmith.chardb.barIconSize = math.max(24, math.min(64, val))
       local barFrame = BarSmith:GetModule("BarFrame")
@@ -200,7 +208,8 @@ function mod:Init()
     local variable = "BarSmith_Alpha"
     local name = "Bar Frame Alpha"
     local tooltip = "Adjust the transparency of the BarSmith frame."
-    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "number", name, 1)
+    local defaultValue = defaultsChar.barAlpha or 1
+    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "number", name, defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       BarSmith.chardb.barAlpha = math.max(0.1, math.min(1, val))
       local barFrame = BarSmith:GetModule("BarFrame")
@@ -217,7 +226,8 @@ function mod:Init()
     local variable = "BarSmith_ShowBackdrop"
     local name = "Show Frame Background"
     local tooltip = "Show or hide the bar container background and border."
-    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, true)
+    local defaultValue = defaultsChar.barShowBackdrop ~= false
+    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       BarSmith.chardb.barShowBackdrop = val
       local barFrame = BarSmith:GetModule("BarFrame")
@@ -233,7 +243,8 @@ function mod:Init()
     local variable = "BarSmith_AutoHideMouseover"
     local name = "Auto-Hide Until Mouseover"
     local tooltip = "Fade the bar when not hovered, and show it when your mouse is over it."
-    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, false)
+    local defaultValue = defaultsChar.barAutoHideMouseover == true
+    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       BarSmith.chardb.barAutoHideMouseover = (val == true)
       local barFrame = BarSmith:GetModule("BarFrame")
@@ -249,7 +260,8 @@ function mod:Init()
     local variable = "BarSmith_FlyoutDirection"
     local name = "Flyout Direction"
     local tooltip = "Direction flyout buttons expand from the main button."
-    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "string", name, "TOP")
+    local defaultValue = defaultsChar.flyoutDirection or "TOP"
+    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "string", name, defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       local direction = string.upper(tostring(val or "TOP"))
       if direction ~= "TOP" and direction ~= "BOTTOM" and direction ~= "LEFT" and direction ~= "RIGHT" then
@@ -274,7 +286,8 @@ function mod:Init()
     local variable = "BarSmith_QB_Enabled"
     local name = "Enable QuickBar"
     local tooltip = "Enable the dedicated QuickBar toggle."
-    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, true)
+    local defaultValue = defaultsChar.quickBar and defaultsChar.quickBar.enabled ~= false
+    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       BarSmith.chardb.quickBar.enabled = (val == true)
     end)
@@ -286,7 +299,8 @@ function mod:Init()
     local variable = "BarSmith_QB_Columns"
     local name = "QuickBar Columns"
     local tooltip = "Number of buttons per row on the QuickBar."
-    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "number", name, 6)
+    local defaultValue = defaultsChar.quickBar and defaultsChar.quickBar.columns or 6
+    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "number", name, defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       BarSmith.chardb.quickBar.columns = math.max(1, math.min(12, val))
       local quickBar = BarSmith:GetModule("QuickBar")
@@ -303,7 +317,8 @@ function mod:Init()
     local variable = "BarSmith_QB_IconSize"
     local name = "QuickBar Icon Size"
     local tooltip = "Button/icon size in pixels for the QuickBar."
-    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "number", name, 32)
+    local defaultValue = defaultsChar.quickBar and defaultsChar.quickBar.iconSize or 32
+    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "number", name, defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       BarSmith.chardb.quickBar.iconSize = math.max(24, math.min(64, val))
       local quickBar = BarSmith:GetModule("QuickBar")
@@ -320,7 +335,8 @@ function mod:Init()
     local variable = "BarSmith_QB_Alpha"
     local name = "QuickBar Alpha"
     local tooltip = "Adjust the transparency of the QuickBar."
-    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "number", name, 1)
+    local defaultValue = defaultsChar.quickBar and defaultsChar.quickBar.alpha or 1
+    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "number", name, defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       BarSmith.chardb.quickBar.alpha = math.max(0.1, math.min(1, val))
       local quickBar = BarSmith:GetModule("QuickBar")
@@ -337,7 +353,8 @@ function mod:Init()
     local variable = "BarSmith_QB_ShowBackdrop"
     local name = "QuickBar Background"
     local tooltip = "Show or hide the QuickBar background and border."
-    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, true)
+    local defaultValue = defaultsChar.quickBar and defaultsChar.quickBar.showBackdrop ~= false
+    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       BarSmith.chardb.quickBar.showBackdrop = (val == true)
       local quickBar = BarSmith:GetModule("QuickBar")
@@ -353,7 +370,11 @@ function mod:Init()
 
   for key, label in pairs(moduleLabels) do
     local variable = "BarSmith_Mod_" .. key
-    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", label, true)
+    local defaultValue = true
+    if BarSmith.DEFAULTS and BarSmith.DEFAULTS.char and BarSmith.DEFAULTS.char.modules then
+      defaultValue = (BarSmith.DEFAULTS.char.modules[key] == true)
+    end
+    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", label, defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       BarSmith.chardb.modules[key] = val
       BarSmith:FireCallback("SETTINGS_CHANGED")
@@ -368,7 +389,8 @@ function mod:Init()
     local variable = "BarSmith_Con_CurrentOnly"
     local name = "Current Expansion Only"
     local tooltip = "Only include consumables from the current expansion."
-    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, false)
+    local defaultValue = defaultsChar.consumables and defaultsChar.consumables.currentExpansionOnly == true
+    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       BarSmith.chardb.consumables.currentExpansionOnly = val
       BarSmith:FireCallback("SETTINGS_CHANGED")
@@ -380,7 +402,8 @@ function mod:Init()
     local variable = "BarSmith_Con_Potions"
     local name = "Potions (All)"
     local tooltip = "Include potions in the combined Consumables flyout."
-    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, true)
+    local defaultValue = defaultsChar.consumables and defaultsChar.consumables.potions ~= false
+    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       BarSmith.chardb.consumables.potions = val
       BarSmith:FireCallback("SETTINGS_CHANGED")
@@ -392,7 +415,8 @@ function mod:Init()
     local variable = "BarSmith_Con_Flasks"
     local name = "Flasks / Elixirs"
     local tooltip = "Include flasks and elixirs in the combined Consumables flyout."
-    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, true)
+    local defaultValue = defaultsChar.consumables and defaultsChar.consumables.flasks ~= false
+    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       BarSmith.chardb.consumables.flasks = val
       BarSmith:FireCallback("SETTINGS_CHANGED")
@@ -404,7 +428,8 @@ function mod:Init()
     local variable = "BarSmith_Con_Food"
     local name = "Food / Drink"
     local tooltip = "Include food and drink in the combined Consumables flyout."
-    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, true)
+    local defaultValue = defaultsChar.consumables and defaultsChar.consumables.food ~= false
+    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       BarSmith.chardb.consumables.food = val
       BarSmith:FireCallback("SETTINGS_CHANGED")
@@ -416,7 +441,8 @@ function mod:Init()
     local variable = "BarSmith_Con_Bandages"
     local name = "Bandages"
     local tooltip = "Include bandages in the combined Consumables flyout."
-    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, true)
+    local defaultValue = defaultsChar.consumables and defaultsChar.consumables.bandages ~= false
+    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       BarSmith.chardb.consumables.bandages = val
       BarSmith:FireCallback("SETTINGS_CHANGED")
@@ -428,7 +454,8 @@ function mod:Init()
     local variable = "BarSmith_Con_Utilities"
     local name = "Utilities"
     local tooltip = "Include utility consumables (drums, runes, etc.) in the combined Consumables flyout."
-    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, true)
+    local defaultValue = defaultsChar.consumables and defaultsChar.consumables.utilities ~= false
+    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       BarSmith.chardb.consumables.utilities = val
       BarSmith:FireCallback("SETTINGS_CHANGED")
@@ -443,7 +470,8 @@ function mod:Init()
     local variable = "BarSmith_Con_Split_Potions"
     local name = "Split: Potions (All) Button"
     local tooltip = "Create a dedicated Potions button and remove them from the parent Consumables flyout."
-    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, false)
+    local defaultValue = defaultsChar.consumables and defaultsChar.consumables.split and defaultsChar.consumables.split.potions == true
+    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       BarSmith.chardb.consumables.split.potions = val
       BarSmith:FireCallback("SETTINGS_CHANGED")
@@ -455,7 +483,8 @@ function mod:Init()
     local variable = "BarSmith_Con_Split_Flasks"
     local name = "Split: Flasks / Elixirs Button"
     local tooltip = "Create a dedicated Flasks/Elixirs button and remove them from the parent Consumables flyout."
-    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, false)
+    local defaultValue = defaultsChar.consumables and defaultsChar.consumables.split and defaultsChar.consumables.split.flasks == true
+    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       BarSmith.chardb.consumables.split.flasks = val
       BarSmith:FireCallback("SETTINGS_CHANGED")
@@ -467,7 +496,8 @@ function mod:Init()
     local variable = "BarSmith_Con_Split_Food"
     local name = "Split: Food / Drink Button"
     local tooltip = "Create a dedicated Food/Drink button and remove them from the parent Consumables flyout."
-    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, false)
+    local defaultValue = defaultsChar.consumables and defaultsChar.consumables.split and defaultsChar.consumables.split.food == true
+    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       BarSmith.chardb.consumables.split.food = val
       BarSmith:FireCallback("SETTINGS_CHANGED")
@@ -479,7 +509,8 @@ function mod:Init()
     local variable = "BarSmith_Con_Split_Bandages"
     local name = "Split: Bandages Button"
     local tooltip = "Create a dedicated Bandages button and remove them from the parent Consumables flyout."
-    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, false)
+    local defaultValue = defaultsChar.consumables and defaultsChar.consumables.split and defaultsChar.consumables.split.bandages == true
+    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       BarSmith.chardb.consumables.split.bandages = val
       BarSmith:FireCallback("SETTINGS_CHANGED")
@@ -491,7 +522,8 @@ function mod:Init()
     local variable = "BarSmith_Con_Split_Utilities"
     local name = "Split: Utilities Button"
     local tooltip = "Create a dedicated Utilities button and remove them from the parent Consumables flyout."
-    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, false)
+    local defaultValue = defaultsChar.consumables and defaultsChar.consumables.split and defaultsChar.consumables.split.utilities == true
+    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       BarSmith.chardb.consumables.split.utilities = val
       BarSmith:FireCallback("SETTINGS_CHANGED")
@@ -506,7 +538,8 @@ function mod:Init()
     local variable = "BarSmith_Mounts_Random"
     local name = "Use Random Favorite Mount"
     local tooltip = "Place the 'Summon Random Favorite Mount' spell instead of individual mounts."
-    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, true)
+    local defaultValue = defaultsChar.mounts and defaultsChar.mounts.randomMount ~= false
+    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       BarSmith.chardb.mounts.randomMount = val
       BarSmith:FireCallback("SETTINGS_CHANGED")
@@ -518,7 +551,8 @@ function mod:Init()
     local variable = "BarSmith_Mounts_TopFavs"
     local name = "Add Top 5 Favorite Mounts"
     local tooltip = "Also include your top 5 favorite mounts as individual buttons."
-    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, false)
+    local defaultValue = defaultsChar.mounts and defaultsChar.mounts.topFavorites == true
+    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       BarSmith.chardb.mounts.topFavorites = val
       BarSmith:FireCallback("SETTINGS_CHANGED")
@@ -533,7 +567,8 @@ function mod:Init()
     local variable = "BarSmith_Debug"
     local name = "Debug Mode"
     local tooltip = "Print debug messages to chat."
-    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, false)
+    local defaultValue = defaultsGlobal.debug == true
+    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name, defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       BarSmith.db.debug = val
     end)
