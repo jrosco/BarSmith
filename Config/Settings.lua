@@ -75,6 +75,7 @@ function mod:Init()
   settingsProxy["BarSmith_ShowBackdrop"]      = (BarSmith.chardb.barShowBackdrop ~= false)
   settingsProxy["BarSmith_AutoHideMouseover"] = (BarSmith.chardb.barAutoHideMouseover == true)
   settingsProxy["BarSmith_FlyoutDirection"]   = BarSmith.chardb.flyoutDirection or "TOP"
+  settingsProxy["BarSmith_HideEmptyModules"]  = (BarSmith.chardb.hideEmptyModules ~= false)
   settingsProxy["BarSmith_QB_Enabled"]        = (BarSmith.chardb.quickBar.enabled ~= false)
   settingsProxy["BarSmith_QB_IconSize"]       = BarSmith.chardb.quickBar.iconSize or 32
   settingsProxy["BarSmith_QB_Columns"]        = BarSmith.chardb.quickBar.columns or 6
@@ -164,6 +165,24 @@ function mod:Init()
           minimapMod:UpdateButton()
         end
       end)
+    Settings.CreateCheckbox(category, setting, tooltip)
+  end
+
+  -- Hide empty module placeholders
+  do
+    local variable = "BarSmith_HideEmptyModules"
+    local name = "Hide Empty Categories"
+    local tooltip = "Hide placeholder buttons for enabled modules that have no items."
+    local defaultValue = defaultsChar.hideEmptyModules ~= false
+    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name,
+    defaultValue)
+    Settings.SetOnValueChangedCallback(variable, function(_, _, val)
+      BarSmith.chardb.hideEmptyModules = (val == true)
+      local placer = BarSmith:GetModule("ActionBarPlacer")
+      if placer then
+        placer:Fill(true)
+      end
+    end)
     Settings.CreateCheckbox(category, setting, tooltip)
   end
 

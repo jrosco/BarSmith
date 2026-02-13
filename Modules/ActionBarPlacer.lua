@@ -246,7 +246,7 @@ function Placer:BuildDisplayItems(items)
         group.name = (self.MODULE_LABELS[mod] or mod) .. " (" .. #children .. ")"
         table.insert(display, group)
       end
-    elseif isEnabled(mod) then
+    elseif isEnabled(mod) and BarSmith.chardb.hideEmptyModules ~= true then
       -- Module enabled but no items: add a placeholder to show the module is active but empty
       addPlaceholder(mod)
     end
