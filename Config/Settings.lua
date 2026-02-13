@@ -61,7 +61,7 @@ function mod:Init()
   local quickBarCategory, quickBarLayout      = Settings.RegisterVerticalLayoutSubcategory(category, "QuickBar")
   local modulesCategory, modulesLayout        = Settings.RegisterVerticalLayoutSubcategory(category, "Modules")
   local filtersCategory, filtersLayout        = Settings.RegisterVerticalLayoutSubcategory(category, "Filters")
-  local mountCategory, mountLayout            = Settings.RegisterVerticalLayoutSubcategory(category, "Mount")
+  local mountCategory, mountLayout            = Settings.RegisterVerticalLayoutSubcategory(category, "Mounts")
   local advancedCategory, advancedLayout      = Settings.RegisterVerticalLayoutSubcategory(category, "Advanced")
 
   -- Seed proxy with current values

@@ -19,7 +19,7 @@ BarSmith.DEFAULTS = {
     -- Dedicated bar settings
     barLocked = true,                 -- lock bar position
     barColumns = 12,                  -- buttons per row (1-12)
-    barIconSize = 36,                 -- button/icon size in pixels
+    barIconSize = 38,                 -- button/icon size in pixels
     barShowBackdrop = true,           -- show the bar container background/border
     barAutoHideMouseover = false,     -- fade bar until mouseover
     barAlpha = 1,                     -- bar frame alpha (0.1 - 1.0)
@@ -28,11 +28,11 @@ BarSmith.DEFAULTS = {
 
     -- QuickBar (separate quick-access bar)
     quickBar = {
-      enabled = true,
+      enabled = false,
       iconSize = 32,
       columns = 8,
       alpha = 1,
-      showBackdrop = true,
+      showBackdrop = false,
       position = nil, -- {x, y} in UIParent space
       slots = {}, -- [index] = item data
     },
