@@ -102,6 +102,17 @@ function BarSmith:RunAutoFill(force)
 end
 
 ------------------------------------------------------------------------
+-- Quick access toggle (temporary bar at cursor)
+------------------------------------------------------------------------
+
+function BarSmith:ToggleQuickBar()
+  local quickBar = self:GetModule("QuickBar")
+  if quickBar and quickBar.Toggle then
+    quickBar:Toggle()
+  end
+end
+
+------------------------------------------------------------------------
 -- Status display
 ------------------------------------------------------------------------
 
@@ -140,6 +151,14 @@ BarSmith:RegisterEvent("ADDON_LOADED", function(self, event, addonName)
   local barFrame = self:GetModule("BarFrame")
   if barFrame then
     barFrame:Init()
+    if self.chardb and self.chardb.enabled == false then
+      barFrame:Hide()
+    end
+  end
+
+  local quickBar = self:GetModule("QuickBar")
+  if quickBar then
+    quickBar:Init()
   end
 
   -- Initialize settings panel

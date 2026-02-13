@@ -1,4 +1,7 @@
 <Bindings>
+  <Binding name="BARSMITH_TOGGLE_QUICKBAR">
+    BarSmith:ToggleQuickBar()
+  </Binding>
   <Binding name="CLICK BarSmithModule_questItems:LeftButton">
     -- Quest Items
   </Binding>

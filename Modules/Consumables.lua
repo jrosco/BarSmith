@@ -104,7 +104,7 @@ function Consumables:Collect(items, bagResults, prefs, splitFlags, categoryKey, 
 
   -- When splitFlags is provided, the caller decides what to include.
   if not splitFlags or not splitFlags[categoryKey] then
-    self:AddUsable(items, bagResults, subtype, prefs)
+    self:AddUsable(items, bagResults, subtype, prefs and prefs.currentExpansionOnly == true)
   end
 end
 
@@ -162,26 +162,27 @@ function Consumables:GetItemsForCategory(subtype)
   self:ApplyIncludes(bagResults)
   local prefs = BarSmith.chardb.consumables
   local split = (prefs and prefs.split) or {}
+  local splitCur = (prefs and prefs.splitCurrentExpansion) or {}
 
   if subtype == "potion" then
     if split.potions or prefs.potions then
-      self:AddUsable(items, bagResults.potions, "potion", prefs)
+      self:AddUsable(items, bagResults.potions, "potion", splitCur.potions == true)
     end
   elseif subtype == "flask" then
     if split.flasks or prefs.flasks then
-      self:AddUsable(items, bagResults.flasks, "flask", prefs)
+      self:AddUsable(items, bagResults.flasks, "flask", splitCur.flasks == true)
     end
   elseif subtype == "food" then
     if split.food or prefs.food then
-      self:AddUsable(items, bagResults.food, "food", prefs)
+      self:AddUsable(items, bagResults.food, "food", splitCur.food == true)
     end
   elseif subtype == "bandage" then
     if split.bandages or prefs.bandages then
-      self:AddUsable(items, bagResults.bandages, "bandage", prefs)
+      self:AddUsable(items, bagResults.bandages, "bandage", splitCur.bandages == true)
     end
   elseif subtype == "utility" then
     if split.utilities or prefs.utilities then
-      self:AddUsable(items, bagResults.utilities, "utility", prefs)
+      self:AddUsable(items, bagResults.utilities, "utility", splitCur.utilities == true)
     end
   end
 
@@ -205,10 +206,10 @@ local function IsCurrentExpansionItem(entry)
   return entry.expacID == current
 end
 
-function Consumables:AddUsable(items, scannedList, subtype, prefs)
+function Consumables:AddUsable(items, scannedList, subtype, currentExpansionOnly)
   local scanner = BarSmith:GetModule("Scanner")
   for _, entry in ipairs(scannedList) do
-    if prefs and prefs.currentExpansionOnly and not IsCurrentExpansionItem(entry) then
+    if currentExpansionOnly and not IsCurrentExpansionItem(entry) then
       -- skip non-current expansion items
     elseif scanner:IsUsableItem(entry.itemID) then
       entry.type = subtype
