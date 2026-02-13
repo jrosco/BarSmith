@@ -425,6 +425,7 @@ function mod:Init()
   end
 
   ---------- Modules ----------
+
   -- modulesLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Modules"))
 
   for key, label in pairs(moduleLabels) do
@@ -685,6 +686,7 @@ function mod:Init()
   end
 
   ---------- Mount Options ----------
+
   mountLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Options"))
 
   do
@@ -716,13 +718,16 @@ function mod:Init()
   end
 
   ---------- Advanced ----------
+
+  advancedLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Advanced"))
+
   do
     local variable = "BarSmith_Debug"
     local name = "Debug Mode"
     local tooltip = "Print debug messages to chat."
     local defaultValue = defaultsGlobal.debug == true
     local setting = Settings.RegisterAddOnSetting(advancedCategory, variable, variable, settingsProxy, "boolean", name,
-      defaultValue)
+    defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       BarSmith.db.debug = val
     end)
