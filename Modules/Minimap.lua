@@ -31,6 +31,13 @@ function MinimapMod:UpdateButton()
 end
 
 function MinimapMod:Init()
+  if BarSmith.db and BarSmith.db.minimap and BarSmith.db.minimap.hide then
+    if self.button then
+      self.button:Hide()
+    end
+    return
+  end
+
   if self.button then
     self:UpdateButton()
     return

@@ -151,6 +151,9 @@ BarSmith:RegisterEvent("ADDON_LOADED", function(self, event, addonName)
   local barFrame = self:GetModule("BarFrame")
   if barFrame then
     barFrame:Init()
+    if self.chardb and self.chardb.enabled == false then
+      barFrame:Hide()
+    end
   end
 
   local quickBar = self:GetModule("QuickBar")

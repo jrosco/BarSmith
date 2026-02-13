@@ -122,14 +122,48 @@ function mod:Init()
   do
     local variable = "BarSmith_Enabled"
     local name = "Enable BarSmith"
-    local tooltip = "Toggle the addon on or off for this character."
+    local tooltip = "Toggle the ActionBar on or off for this character."
     local defaultValue = defaultsChar.enabled ~= false
     local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name,
     defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       BarSmith.chardb.enabled = val
+      local barFrame = BarSmith:GetModule("BarFrame")
+      if not val then
+        if barFrame and barFrame.Hide then
+          barFrame:Hide()
+        end
+      else
+        if barFrame and barFrame.Show then
+          barFrame:Show()
+        end
+      end
       BarSmith:FireCallback("SETTINGS_CHANGED")
     end)
+    Settings.CreateCheckbox(category, setting, tooltip)
+  end
+
+  -- Minimap icon
+  do
+    local variable = "BarSmith_Minimap_Show"
+    local name = "Show Minimap Icon"
+    local tooltip = "Show or hide the BarSmith minimap icon."
+    local defaultValue = not (defaultsGlobal.minimap and defaultsGlobal.minimap.hide == true)
+    local setting = Settings.RegisterProxySetting(category, variable, "boolean", name, defaultValue,
+      function()
+        return not (BarSmith.db and BarSmith.db.minimap and BarSmith.db.minimap.hide)
+      end,
+      function(value)
+        if not BarSmith.db or not BarSmith.db.minimap then return end
+        BarSmith.db.minimap.hide = not value
+        local minimapMod = BarSmith:GetModule("Minimap")
+        if minimapMod and minimapMod.Init then
+          minimapMod:Init()
+        end
+        if minimapMod and minimapMod.UpdateButton then
+          minimapMod:UpdateButton()
+        end
+      end)
     Settings.CreateCheckbox(category, setting, tooltip)
   end
 
