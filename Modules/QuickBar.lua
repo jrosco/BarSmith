@@ -12,10 +12,27 @@ local BAR_PADDING = 4
 local HOVER_HIT_INSET = math.max(2, math.ceil(BUTTON_PADDING / 2))
 local HIDE_DELAY = 0.3
 local TOOLTIP_ICON = "|TInterface\\AddOns\\BarSmith\\Textures\\bs:14:14:0:0|t"
+local PREVIEW_ICONS = {
+  "Interface\\Icons\\INV_Potion_93",
+  "Interface\\Icons\\INV_Misc_Food_60",
+  "Interface\\Icons\\INV_Misc_Book_11",
+  "Interface\\Icons\\INV_Misc_Gem_Bloodstone_01",
+  "Interface\\Icons\\INV_Misc_Rune_01",
+  "Interface\\Icons\\INV_Misc_EngGizmos_01",
+  "Interface\\Icons\\INV_Misc_Herb_19",
+  "Interface\\Icons\\INV_Misc_Bag_09",
+  "Interface\\Icons\\INV_Misc_ArmorKit_17",
+  "Interface\\Icons\\INV_Misc_Map_01",
+}
 
 local QUICKBAR_SECURE_SHOW = [[
   local bar = control and control:GetFrameRef("bs_quickbar")
   if not bar then return end
+  if (control:GetAttribute("bs_preview") or 0) == 1 then
+    if bar:IsShown() then return end
+    bar:Show()
+    return
+  end
   control:SetAttribute("bs_sticky", 0)
   if bar:IsShown() then return end
   bar:Show()
@@ -23,6 +40,7 @@ local QUICKBAR_SECURE_SHOW = [[
 local QUICKBAR_SECURE_HIDE = [[
   local bar = control and control:GetFrameRef("bs_quickbar")
   if not bar or not bar:IsShown() then return end
+  if (control:GetAttribute("bs_preview") or 0) == 1 then return end
   if (control:GetAttribute("bs_sticky") or 0) == 1 then return end
   local count = control:GetAttribute("bs_button_count") or 0
   for i = 1, count do
@@ -108,6 +126,12 @@ function QuickBar:Init()
   self.frame:SetFrameStrata("DIALOG")
   self.frame:Hide()
 
+  self.previewLabel = self.frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+  self.previewLabel:SetPoint("BOTTOMLEFT", self.frame, "TOPLEFT", 4, 6)
+  self.previewLabel:SetText("QuickBar Preview")
+  self.previewLabel:SetTextColor(NORMAL_FONT_COLOR.r, NORMAL_FONT_COLOR.g, NORMAL_FONT_COLOR.b)
+  self.previewLabel:Hide()
+
   self.toggleButton = CreateFrame("Button", "BarSmithQuickBarToggle", UIParent, "SecureHandlerClickTemplate")
   self.toggleButton:Hide()
   self.toggleButton:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 0, 0)
@@ -128,6 +152,7 @@ function QuickBar:Init()
     end
   end)
   self:UpdateToggleState()
+  self:UpdatePreviewState()
   self:UpdateKeybindOverrides()
 
   self.frame:SetBackdrop({
@@ -188,6 +213,82 @@ function QuickBar:UpdateToggleState()
   self.toggleButton:SetAttribute("bs_has_items", hasItems)
   if enabled == 0 and self.frame and self.frame:IsShown() then
     self:Hide()
+  end
+end
+
+function QuickBar:UpdatePreviewState()
+  if not self.toggleButton then return end
+  if InCombatLockdown() then return end
+  if self.previewMode then
+    self.toggleButton:SetAttribute("bs_preview", 1)
+    if self.previewLabel then
+      self.previewLabel:Show()
+    end
+  else
+    self.toggleButton:SetAttribute("bs_preview", 0)
+    if self.previewLabel then
+      self.previewLabel:Hide()
+    end
+  end
+end
+
+function QuickBar:GetPreviewCount()
+  return MAX_QUICKBAR_BUTTONS
+end
+
+function QuickBar:ShowPreview()
+  if InCombatLockdown() then
+    BarSmith:Print("Cannot show QuickBar preview during combat.")
+    return
+  end
+  if not self.frame then
+    self:Init()
+  end
+  self.previewMode = true
+  self:UpdatePreviewState()
+  self:CancelHideTimer()
+  self.frame:ClearAllPoints()
+  self.frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+  self:UpdateLayout(self:GetPreviewCount())
+  self:UpdateBackdropVisibility()
+  self:ApplyPreviewButtons()
+  self.frame:Show()
+end
+
+function QuickBar:HidePreview()
+  if not self.frame then return end
+  if InCombatLockdown() then
+    BarSmith:Print("Cannot hide QuickBar preview during combat.")
+    return
+  end
+  self.previewMode = false
+  self:UpdatePreviewState()
+  self:CancelHideTimer()
+  self.frame:Hide()
+  self:RestorePosition()
+  self:Refresh()
+end
+
+function QuickBar:ApplyPreviewButtons()
+  if not self.frame then return end
+  if InCombatLockdown() then return end
+  local previewCount = self:GetPreviewCount()
+  local iconCount = #PREVIEW_ICONS
+  for i, btn in ipairs(self.buttons) do
+    btn.itemData = nil
+    if i <= previewCount then
+      btn:SetAttribute("type", nil)
+      btn:SetAttribute("spell", nil)
+      btn:SetAttribute("item", nil)
+      btn:SetAttribute("toy", nil)
+      btn:SetAttribute("macrotext", nil)
+      local iconIndex = ((i - 1) % iconCount) + 1
+      btn.icon:SetTexture(PREVIEW_ICONS[iconIndex])
+      btn.count:SetText("")
+      btn:Show()
+    else
+      btn:Hide()
+    end
   end
 end
 
@@ -282,10 +383,10 @@ function QuickBar:ShowButtonTooltip(btn)
   GameTooltip:Show()
 end
 
-function QuickBar:UpdateLayout()
+function QuickBar:UpdateLayout(forcedCount)
   if not self.frame then return end
   if InCombatLockdown() then return end
-  local activeCount = self:GetActiveCount()
+  local activeCount = forcedCount or (self.previewMode and self:GetPreviewCount()) or self:GetActiveCount()
   local cols = self:GetColumns()
   if activeCount <= 0 then
     self.frame:SetSize(1, 1)
@@ -336,9 +437,13 @@ end
 
 function QuickBar:StartHideTimer()
   self:CancelHideTimer()
+  if self.previewMode then return end
   if InCombatLockdown() then return end
   self._hideTimer = C_Timer.NewTimer(HIDE_DELAY, function()
     self._hideTimer = nil
+    if self.previewMode then
+      return
+    end
     if InCombatLockdown() then
       return
     end
@@ -387,6 +492,12 @@ function QuickBar:Refresh()
   local cfg = self:GetConfig()
   cfg.slots = cfg.slots or {}
   local inCombat = InCombatLockdown()
+  if self.previewMode and not inCombat then
+    self:UpdateLayout(self:GetPreviewCount())
+    self:UpdateBackdropVisibility()
+    self:ApplyPreviewButtons()
+    return
+  end
   local activeCount = self:GetActiveCount()
   if activeCount <= 0 then
     if not inCombat then
@@ -442,6 +553,8 @@ function QuickBar:ShowAtCursor()
     BarSmith:Print("QuickBar toggle is protected in combat. Use the keybind.")
     return
   end
+  self.previewMode = false
+  self:UpdatePreviewState()
   if self.toggleButton then
     self.toggleButton:SetAttribute("bs_sticky", 0)
   end

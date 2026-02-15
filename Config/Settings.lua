@@ -81,6 +81,7 @@ function mod:Init()
   settingsProxy["BarSmith_QB_Columns"]        = BarSmith.chardb.quickBar.columns or 6
   settingsProxy["BarSmith_QB_Alpha"]          = BarSmith.chardb.quickBar.alpha or 1
   settingsProxy["BarSmith_QB_ShowBackdrop"]   = (BarSmith.chardb.quickBar.showBackdrop ~= false)
+  settingsProxy["BarSmith_QB_Preview"]        = false
   settingsProxy["BarSmith_Mounts_Random"]     = BarSmith.chardb.mounts.randomMount
   settingsProxy["BarSmith_Mounts_TopFavs"]    = BarSmith.chardb.mounts.topFavorites
   settingsProxy["BarSmith_Debug"]             = BarSmith.db.debug
@@ -442,6 +443,27 @@ function mod:Init()
       local quickBar = BarSmith:GetModule("QuickBar")
       if quickBar then
         quickBar:UpdateBackdropVisibility()
+      end
+    end)
+    Settings.CreateCheckbox(quickBarCategory, setting, tooltip)
+  end
+
+  -- QuickBar preview
+  do
+    local variable = "BarSmith_QB_Preview"
+    local name = "Preview QuickBar"
+    local tooltip = "Show the QuickBar while adjusting layout and appearance."
+    local defaultValue = false
+    local setting = Settings.RegisterAddOnSetting(quickBarCategory, variable, variable, settingsProxy, "boolean", name,
+    defaultValue)
+    Settings.SetOnValueChangedCallback(variable, function(_, _, val)
+      local quickBar = BarSmith:GetModule("QuickBar")
+      if quickBar then
+        if val == true then
+          quickBar:ShowPreview()
+        else
+          quickBar:HidePreview()
+        end
       end
     end)
     Settings.CreateCheckbox(quickBarCategory, setting, tooltip)
