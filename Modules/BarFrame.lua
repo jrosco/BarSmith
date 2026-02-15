@@ -240,6 +240,10 @@ function BarFrame:Init()
   BarSmith:RegisterCallback("SETTINGS_CHANGED", self, self.OnSettingsChanged)
   BarSmith:RegisterEvent("UPDATE_BINDINGS", function()
     self:UpdateAllHotkeys()
+    local quickBar = BarSmith:GetModule("QuickBar")
+    if quickBar and quickBar.UpdateKeybindOverrides then
+      quickBar:UpdateKeybindOverrides()
+    end
   end)
 
   -- Module keybind buttons (hidden, for key bindings)

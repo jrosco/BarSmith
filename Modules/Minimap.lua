@@ -23,7 +23,9 @@ function MinimapMod:UpdateButton()
 
   local angle = ClampAngle(BarSmith.db.minimap.angle or 225)
   local rad = math.rad(angle)
-  local radius = 80
+  local mapRadius = (Minimap:GetWidth() or 140) / 2
+  local btnRadius = (self.button:GetWidth() or 32) / 2
+  local radius = mapRadius + btnRadius + 2
   local x = math.cos(rad) * radius
   local y = math.sin(rad) * radius
   self.button:SetPoint("CENTER", Minimap, "CENTER", x, y)
@@ -53,11 +55,9 @@ function MinimapMod:Init()
 
   btn.icon = btn:CreateTexture(nil, "BACKGROUND")
   btn.icon:SetTexture("Interface\\AddOns\\BarSmith\\Textures\\bs")
-  btn.icon:SetAllPoints()
-
-  btn.border = btn:CreateTexture(nil, "OVERLAY")
-  btn.border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
-  btn.border:SetAllPoints()
+  btn.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+  btn.icon:SetSize(18, 18)
+  btn.icon:SetPoint("CENTER", btn, "CENTER", 0, 0)
 
   btn:SetScript("OnEnter", function()
     GameTooltip:SetOwner(btn, "ANCHOR_LEFT")
