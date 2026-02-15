@@ -1,6 +1,6 @@
 <Bindings>
   <Binding name="BARSMITH_TOGGLE_QUICKBAR">
-    BarSmith:ToggleQuickBar()
+    -- QuickBar toggle (secure override)
   </Binding>
   <Binding name="CLICK BarSmithModule_questItems:LeftButton">
     -- Quest Items

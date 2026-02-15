@@ -30,10 +30,10 @@ BarSmith.DEFAULTS = {
     -- QuickBar (separate quick-access bar)
     quickBar = {
       enabled = false,
-      iconSize = 32,
-      columns = 8,
+      iconSize = 42,
+      columns = 10,
       alpha = 1,
-      showBackdrop = false,
+      showBackdrop = true,
       position = nil, -- {x, y} in UIParent space
       slots = {}, -- [index] = item data
     },

@@ -364,6 +364,10 @@ function mod:Init()
     name, defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       BarSmith.chardb.quickBar.enabled = (val == true)
+      local quickBar = BarSmith:GetModule("QuickBar")
+      if quickBar then
+        quickBar:UpdateToggleState()
+      end
     end)
     Settings.CreateCheckbox(quickBarCategory, setting, tooltip)
   end
@@ -773,6 +777,34 @@ function mod:Init()
           preferredIndex = 3,
         }
         StaticPopup_Show("BARSMITH_RESET_KEEP_LISTS")
+      end,
+    })
+    advancedLayout:AddInitializer(initializer)
+  end
+
+  do
+    local initializer = Settings.CreateElementInitializer("BarSmithSettingsButtonTemplate", {
+      text = "Reset QuickBar",
+      buttonText = "Reset QuickBar",
+      OnClick = function()
+        StaticPopupDialogs["BARSMITH_RESET_QUICKBAR"] = StaticPopupDialogs["BARSMITH_RESET_QUICKBAR"] or {
+          text = "Reset QuickBar to defaults?",
+          button1 = "Yes",
+          button2 = "No",
+          OnAccept = function()
+            local quickBar = BarSmith:GetModule("QuickBar")
+            if quickBar and quickBar.ResetDefaults then
+              quickBar:ResetDefaults()
+            else
+              BarSmith:Print("QuickBar is not available.")
+            end
+          end,
+          timeout = 0,
+          whileDead = true,
+          hideOnEscape = true,
+          preferredIndex = 3,
+        }
+        StaticPopup_Show("BARSMITH_RESET_QUICKBAR")
       end,
     })
     advancedLayout:AddInitializer(initializer)
