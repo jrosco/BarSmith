@@ -449,6 +449,12 @@ function BarFrame:CreateButton(index)
   btn.flyoutIndicator:SetPoint("BOTTOMLEFT", 2, 2)
   btn.flyoutIndicator:SetText("")
 
+  if BarSmith.MasqueAddButton then
+
+    BarSmith:MasqueAddButton(btn)
+
+  end
+
   -- Flyout child button pool
   btn.flyoutButtons = {}
   btn.flyoutItems = nil
@@ -542,6 +548,12 @@ function BarFrame:CreateFlyoutButtons(parentBtn)
 
     child.parentButton = parentBtn
     child.itemData = nil
+
+    if BarSmith.MasqueAddButton then
+
+      BarSmith:MasqueAddButton(child)
+
+    end
 
     child:SetScript("OnEnter", function(b)
       self:NotifyMouseEnter()
@@ -1218,6 +1230,9 @@ function BarFrame:UpdateLayout()
 
   self:UpdateButtonFontSizes()
   self:UpdateAutoHideState()
+  if BarSmith.MasqueReSkin then
+    BarSmith:MasqueReSkin()
+  end
 end
 
 ------------------------------------------------------------------------
@@ -1511,3 +1526,5 @@ function BarFrame:GetActiveCount()
   end
   return count
 end
+
+

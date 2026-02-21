@@ -342,6 +342,12 @@ function QuickBar:CreateButton(index)
   btn.count:SetPoint("BOTTOMRIGHT", -2, 2)
   btn.count:SetText("")
 
+  if BarSmith.MasqueAddButton then
+
+    BarSmith:MasqueAddButton(btn, "QuickBar")
+
+  end
+
   btn:SetScript("OnEnter", function()
     self:CancelHideTimer()
     self:ShowButtonTooltip(btn)
@@ -413,6 +419,9 @@ function QuickBar:UpdateLayout(forcedCount)
       btn:SetPoint("TOPLEFT", self.frame, "TOPLEFT", x, y)
       btn:SetSize(size, size)
     end
+  end
+  if BarSmith.MasqueReSkin then
+    BarSmith:MasqueReSkin("QuickBar")
   end
 end
 
@@ -772,3 +781,4 @@ function QuickBar:ClearSlot(index)
   self:CompactSlots()
   self:Refresh()
 end
+

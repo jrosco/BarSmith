@@ -82,6 +82,7 @@ function mod:Init()
   settingsProxy["BarSmith_QB_Alpha"]          = BarSmith.chardb.quickBar.alpha or 1
   settingsProxy["BarSmith_QB_ShowBackdrop"]   = (BarSmith.chardb.quickBar.showBackdrop ~= false)
   settingsProxy["BarSmith_QB_Preview"]        = false
+  settingsProxy["BarSmith_Masque"]            = (BarSmith.chardb.masqueEnabled == true)
   settingsProxy["BarSmith_Mounts_Random"]     = BarSmith.chardb.mounts.randomMount
   settingsProxy["BarSmith_Mounts_TopFavs"]    = BarSmith.chardb.mounts.topFavorites
   settingsProxy["BarSmith_Debug"]             = BarSmith.db.debug
@@ -775,6 +776,20 @@ function mod:Init()
     defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       BarSmith.db.debug = val
+    end)
+    Settings.CreateCheckbox(advancedCategory, setting, tooltip)
+  end
+
+  do
+    local variable = "BarSmith_Masque"
+    local name = "Enable Masque Skinning"
+    local tooltip = "Allow Masque to skin BarSmith buttons (requires Masque)."
+    local defaultValue = defaultsChar.masqueEnabled == true
+    local setting = Settings.RegisterAddOnSetting(advancedCategory, variable, variable, settingsProxy, "boolean", name,
+    defaultValue)
+    Settings.SetOnValueChangedCallback(variable, function(_, _, val)
+      BarSmith.chardb.masqueEnabled = (val == true)
+      BarSmith:MasqueRefreshAll()
     end)
     Settings.CreateCheckbox(advancedCategory, setting, tooltip)
   end

@@ -26,6 +26,7 @@ BarSmith.DEFAULTS = {
     flyoutDirection = "TOP",          -- TOP, BOTTOM, LEFT, RIGHT
     barPosition = nil,                -- saved {point, relPoint, x, y}
     hideEmptyModules = true,          -- hide placeholder buttons for enabled but empty modules
+    masqueEnabled = true,             -- allow Masque to skin BarSmith buttons
 
     -- QuickBar (separate quick-access bar)
     quickBar = {

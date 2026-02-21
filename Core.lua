@@ -12,6 +12,110 @@ BarSmith.version = C_AddOns.GetAddOnMetadata(ADDON_NAME, "Version") or "dev"
 BarSmith.modules = {}
 BarSmith.events = {}
 
+-- Masque support
+local Masque = LibStub and LibStub("Masque", true)
+local MasqueGroups = Masque and {
+  Main = Masque:Group(ADDON_NAME),
+  QuickBar = Masque:Group(ADDON_NAME, "QuickBar"),
+}
+local MasqueButtons = {
+  Main = {},
+  QuickBar = {},
+}
+
+local function IsMasqueEnabled()
+  return BarSmith and BarSmith.chardb and BarSmith.chardb.masqueEnabled == true
+end
+
+local function TrackMasqueButton(groupKey, btn)
+  local bucket = MasqueButtons[groupKey]
+  if bucket then
+    bucket[btn] = true
+  end
+end
+
+local function UntrackMasqueButton(groupKey, btn)
+  local bucket = MasqueButtons[groupKey]
+  if bucket then
+    bucket[btn] = nil
+  end
+end
+
+function BarSmith:MasqueAddButton(btn, group)
+  if not IsMasqueEnabled() then return end
+  local groupKey = group or "Main"
+  local g = MasqueGroups and MasqueGroups[groupKey]
+  if not g or not btn or btn.__bs_masque then return end
+
+  g:AddButton(btn, {
+    Icon = btn.icon,
+    Cooldown = btn.cooldown,
+    Count = btn.count,
+    HotKey = btn.hotkey,
+    Border = btn.border,
+    Pushed = btn:GetPushedTexture(),
+    Highlight = btn:GetHighlightTexture(),
+    Normal = btn:GetNormalTexture(),
+  })
+
+  btn.__bs_masque = true
+  TrackMasqueButton(groupKey, btn)
+end
+
+function BarSmith:MasqueRemoveButton(btn, group)
+  local groupKey = group or "Main"
+  local g = MasqueGroups and MasqueGroups[groupKey]
+  if not g or not btn or not btn.__bs_masque then return end
+  if g.RemoveButton then
+    g:RemoveButton(btn)
+    btn.__bs_masque = nil
+    UntrackMasqueButton(groupKey, btn)
+  end
+end
+
+function BarSmith:MasqueReSkin(group)
+  local g = MasqueGroups and MasqueGroups[group or "Main"]
+  if g then g:ReSkin() end
+end
+
+function BarSmith:MasqueRefreshAll()
+  if not MasqueGroups then return end
+
+  if not IsMasqueEnabled() then
+    for groupKey, bucket in pairs(MasqueButtons) do
+      local g = MasqueGroups[groupKey]
+      if g and g.RemoveButton then
+        for btn in pairs(bucket) do
+          g:RemoveButton(btn)
+          btn.__bs_masque = nil
+          bucket[btn] = nil
+        end
+      end
+    end
+    return
+  end
+
+  local barFrame = self:GetModule("BarFrame")
+  if barFrame and barFrame.buttons then
+    for _, btn in ipairs(barFrame.buttons) do
+      self:MasqueAddButton(btn)
+      for _, child in ipairs(btn.flyoutButtons or {}) do
+        self:MasqueAddButton(child)
+      end
+    end
+  end
+
+  local quickBar = self:GetModule("QuickBar")
+  if quickBar and quickBar.buttons then
+    for _, btn in ipairs(quickBar.buttons) do
+      self:MasqueAddButton(btn, "QuickBar")
+    end
+  end
+
+  self:MasqueReSkin()
+  self:MasqueReSkin("QuickBar")
+end
+
 -- Logging
 local CHAT_PREFIX = "|cff33ccff[BarSmith]|r "
 
@@ -278,3 +382,5 @@ function BarSmith:GetLastUsedForModule(moduleName)
   end
   return self.chardb.lastUsedByModule[moduleName]
 end
+
+
