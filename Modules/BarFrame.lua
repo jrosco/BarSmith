@@ -20,6 +20,35 @@ local VALID_FLYOUT_DIRECTIONS = {
 local DEFAULT_BUTTON_SIZE = 36
 local BUTTON_PADDING = 3
 local BAR_PADDING = 4
+local PIN_ICON_ATLAS = "Waypoint-MapPin-Minimap-Tracked"
+local PIN_ICON_SCALE = 0.4
+local PIN_ICON_MIN_SIZE = 8
+local PIN_ICON_MAX_SIZE = 0 -- 0 disables max clamp
+local PIN_ICON_INSET_SCALE = 0.05
+local PIN_ICON_MIN_INSET = 0
+local PIN_ICON_OFFSET_X = -2
+local PIN_ICON_OFFSET_Y = 2
+local PIN_ICON_ALPHA = 0.8
+local OVERLAY_ICON_SCALE = 0.5
+local OVERLAY_ICON_MIN_SIZE = 10
+local OVERLAY_ICON_MAX_SIZE = 0 -- 0 disables max clamp
+local OVERLAY_ICON_OFFSET_X = 0
+local OVERLAY_ICON_OFFSET_Y = 0
+local OVERLAY_ICON_ALPHA = 1
+-- Per-item overlay usage (optional):
+-- data.overlay = {
+--   atlas = "AtlasName", -- required to show
+--   texture = 123456,   -- fileID or path (optional alternative to atlas)
+--   scale = 0.35,        -- relative to button size (optional)
+--   size = 14,           -- absolute size (optional, overrides scale)
+--   minSize = 8,         -- clamp minimum (optional)
+--   maxSize = 0,         -- clamp maximum; 0 disables max (optional)
+--   offsetX = 0,         -- center offset (optional)
+--   offsetY = 0,
+--   alpha = 0.9,         -- opacity (optional)
+-- }
+-- data.overlayAtlas = "AtlasName" still works as a simple shorthand.
+
 local FLYOUT_AUTO_CLOSE = 0.5 -- seconds before flyout auto-closes
 local AUTO_HIDE_ALPHA = 0
 local MOUSE_LEAVE_CHECK_DELAY = 1
@@ -412,6 +441,7 @@ function BarFrame:CreateButton(index)
   -- Custom fields
   btn.index = index
   btn.itemData = nil   -- reference to the BarSmith item data
+  btn.overlayConfig = nil
 
   -- Pushed/highlight feedback (no normal texture border)
   btn:SetPushedTexture("Interface\\Buttons\\UI-Quickslot-Depress")
@@ -436,6 +466,21 @@ function BarFrame:CreateButton(index)
   btn.hotkey:SetPoint("TOPRIGHT", -2, -2)
   btn.hotkey:SetTextColor(1, 0.82, 0)
   btn.hotkey:SetText("")
+
+  -- Pinned indicator
+  btn.pinIcon = btn.pinIcon or btn:CreateTexture(btnName .. "Pin", "OVERLAY")
+  btn.pinIcon:SetPoint("TOPLEFT", 0, 0)
+  btn.pinIcon:SetDrawLayer("OVERLAY", 7)
+  btn.pinIcon:SetAlpha(PIN_ICON_ALPHA)
+  btn.pinIcon:Hide()
+  self:ApplyPinIconStyle(btn)
+
+  -- Overlay indicator (e.g. faction crest)
+  btn.overlayIcon = btn.overlayIcon or btn:CreateTexture(btnName .. "Overlay", "OVERLAY")
+  btn.overlayIcon:SetDrawLayer("OVERLAY", 6)
+  btn.overlayIcon:SetAlpha(OVERLAY_ICON_ALPHA)
+  btn.overlayIcon:Hide()
+  self:ApplyOverlayIconStyle(btn)
 
   -- Border highlight for usability
   btn.border = btn:CreateTexture(btnName .. "Border", "OVERLAY")
@@ -490,6 +535,10 @@ function BarFrame:CreateButton(index)
 
   -- HookScript preserves ActionButtonTemplate's existing OnMouseUp handler
   btn:HookScript("OnMouseUp", function(b, button)
+    if button == "LeftButton" and IsControlKeyDown() then
+      self:TogglePinnedForButton(b)
+      return
+    end
     if IsSettingsClick(button) then
       local settings = BarSmith:GetModule("BarFrameSettings")
       if settings and settings.ToggleIncludeExcludeFrame then
@@ -546,8 +595,15 @@ function BarFrame:CreateFlyoutButtons(parentBtn)
     child.hotkey:SetTextColor(1, 0.82, 0)
     child.hotkey:SetText("")
 
+    child.overlayIcon = child.overlayIcon or child:CreateTexture(prefix .. i .. "Overlay", "OVERLAY")
+    child.overlayIcon:SetDrawLayer("OVERLAY", 6)
+    child.overlayIcon:SetAlpha(OVERLAY_ICON_ALPHA)
+    child.overlayIcon:Hide()
+    self:ApplyOverlayIconStyle(child)
+
     child.parentButton = parentBtn
     child.itemData = nil
+    child.overlayConfig = nil
 
     if BarSmith.MasqueAddButton then
 
@@ -558,7 +614,7 @@ function BarFrame:CreateFlyoutButtons(parentBtn)
     child:SetScript("OnEnter", function(b)
       self:NotifyMouseEnter()
       self:CancelAutoCloseTimer()
-      self:ShowButtonTooltip(b)
+      self:ShowButtonTooltip(b, true)
     end)
     child:SetScript("OnLeave", function()
       self:NotifyMouseLeave()
@@ -569,6 +625,10 @@ function BarFrame:CreateFlyoutButtons(parentBtn)
       self:HandleReceiveDrag(b)
     end)
     child:HookScript("OnMouseUp", function(b, button)
+      if button == "LeftButton" and IsControlKeyDown() then
+        self:TogglePinnedForButton(b)
+        return
+      end
       if IsSettingsClick(button) then
         local settings = BarSmith:GetModule("BarFrameSettings")
         if settings and settings.ToggleIncludeExcludeFrame then
@@ -586,7 +646,13 @@ function BarFrame:CreateFlyoutButtons(parentBtn)
         return
       end
       self:HandleButtonPostClick(b, button)
-      self:PromoteChildAsPrimary(b.parentButton, b.itemData)
+      if not (button == "LeftButton" and IsControlKeyDown()) then
+        local moduleName = b.itemData and b.itemData.module
+        local pinned = moduleName and BarSmith:GetPinnedForModule(moduleName)
+        if not pinned or BarSmith:GetActionIdentityKey(b.itemData) == pinned then
+          self:PromoteChildAsPrimary(b.parentButton, b.itemData)
+        end
+      end
       -- No timer restart here; OnLeave handles it when mouse actually leaves
     end)
 
@@ -626,6 +692,12 @@ function BarFrame:SetButtonAction(btn, data, clickButton)
   btn:SetAttribute("shift-macrotext2", nil)
   btn:SetAttribute("alt-type2", nil)
   btn:SetAttribute("alt-macrotext2", nil)
+  btn:SetAttribute("ctrl-type", nil)
+  btn:SetAttribute("ctrl-macrotext", nil)
+  btn:SetAttribute("ctrl-type1", nil)
+  btn:SetAttribute("ctrl-macrotext1", nil)
+  btn:SetAttribute("ctrl-type2", nil)
+  btn:SetAttribute("ctrl-macrotext2", nil)
   btn:SetAttribute("macrotext2", nil)
   btn:SetAttribute("alt-type1", nil)
   btn:SetAttribute("alt-macrotext1", nil)
@@ -651,6 +723,12 @@ function BarFrame:SetButtonAction(btn, data, clickButton)
     btn:SetAttribute("alt-macrotext2", "/stopmacro")
     btn:SetAttribute("shift-type2", "macro")
     btn:SetAttribute("shift-macrotext2", "/stopmacro")
+    btn:SetAttribute("ctrl-type", "macro")
+    btn:SetAttribute("ctrl-macrotext", "/stopmacro")
+    btn:SetAttribute("ctrl-type1", "macro")
+    btn:SetAttribute("ctrl-macrotext1", "/stopmacro")
+    btn:SetAttribute("ctrl-type2", "macro")
+    btn:SetAttribute("ctrl-macrotext2", "/stopmacro")
     return
   end
 
@@ -687,21 +765,45 @@ function BarFrame:SetButtonAction(btn, data, clickButton)
   btn:SetAttribute("alt-macrotext2", "/stopmacro")
   btn:SetAttribute("shift-type2", "macro")
   btn:SetAttribute("shift-macrotext2", "/stopmacro")
+  btn:SetAttribute("ctrl-type", "macro")
+  btn:SetAttribute("ctrl-macrotext", "/stopmacro")
+  btn:SetAttribute("ctrl-type1", "macro")
+  btn:SetAttribute("ctrl-macrotext1", "/stopmacro")
+  btn:SetAttribute("ctrl-type2", "macro")
+  btn:SetAttribute("ctrl-macrotext2", "/stopmacro")
 end
 
 function BarFrame:ApplyButtonVisuals(btn, data)
   if not data then
     btn.icon:SetTexture(nil)
+    if btn.icon.SetAtlas then
+      btn.icon:SetAtlas(nil)
+    end
     btn.count:SetText("")
+    btn.overlayConfig = nil
+    if btn.overlayIcon then
+      btn.overlayIcon:SetTexture(nil)
+      if btn.overlayIcon.SetAtlas then
+        btn.overlayIcon:SetAtlas(nil)
+      end
+      btn.overlayIcon:Hide()
+    end
     return
   end
 
-  if data.icon then
+  if data.iconAtlas and btn.icon.SetAtlas then
+    btn.icon:SetAtlas(data.iconAtlas, true)
+    btn.icon:SetDesaturated(false)
+    btn.icon:SetVertexColor(1, 1, 1)
+  elseif data.icon then
     btn.icon:SetTexture(data.icon)
     btn.icon:SetDesaturated(false)
     btn.icon:SetVertexColor(1, 1, 1)
   else
     btn.icon:SetTexture(nil)
+    if btn.icon.SetAtlas then
+      btn.icon:SetAtlas(nil)
+    end
   end
 
   if data.count and data.count > 1 then
@@ -709,6 +811,87 @@ function BarFrame:ApplyButtonVisuals(btn, data)
   else
     btn.count:SetText("")
   end
+
+  local overlay = nil
+  if type(data.overlay) == "table" then
+    overlay = data.overlay
+  elseif data.overlayAtlas then
+    overlay = { atlas = data.overlayAtlas }
+  end
+  btn.overlayConfig = overlay
+
+  if btn.overlayIcon then
+    if overlay and overlay.atlas and btn.overlayIcon.SetAtlas then
+      btn.overlayIcon:SetAtlas(overlay.atlas, true)
+      btn.overlayIcon:SetDesaturated(false)
+      btn.overlayIcon:SetVertexColor(1, 1, 1)
+      btn.overlayIcon:Show()
+    else
+      btn.overlayIcon:SetTexture(nil)
+      if btn.overlayIcon.SetAtlas then
+        btn.overlayIcon:SetAtlas(nil)
+      end
+      btn.overlayIcon:Hide()
+    end
+  end
+  self:ApplyOverlayIconStyle(btn)
+end
+
+function BarFrame:UpdateButtonPinnedIndicator(btn)
+  if not btn or not btn.pinIcon then return end
+  self:ApplyPinIconStyle(btn)
+  local moduleKey = nil
+  if btn.groupData and btn.groupData.module then
+    moduleKey = btn.groupData.module
+  elseif btn.itemData and btn.itemData.module then
+    moduleKey = btn.itemData.module
+  end
+  if not moduleKey then
+    btn.pinIcon:Hide()
+    return
+  end
+  local pinned = BarSmith:GetPinnedForModule(moduleKey)
+  if pinned then
+    btn.pinIcon:Show()
+  else
+    btn.pinIcon:Hide()
+  end
+end
+
+function BarFrame:ApplyPinIconStyle(btn)
+  if not btn or not btn.pinIcon then return end
+  local baseSize = (btn.GetWidth and btn:GetWidth()) or self:GetButtonSize() or DEFAULT_BUTTON_SIZE
+  local iconSize = math.floor(baseSize * PIN_ICON_SCALE)
+  local maxSize = (PIN_ICON_MAX_SIZE and PIN_ICON_MAX_SIZE > 0) and PIN_ICON_MAX_SIZE or iconSize
+  iconSize = math.max(PIN_ICON_MIN_SIZE, math.min(maxSize, iconSize))
+  local inset = math.max(PIN_ICON_MIN_INSET, math.floor(baseSize * PIN_ICON_INSET_SCALE))
+  if btn.pinIcon.SetAtlas then
+    btn.pinIcon:SetAtlas(PIN_ICON_ATLAS, true)
+  else
+    btn.pinIcon:SetTexture("Interface\\Minimap\\ObjectIcons")
+  end
+  btn.pinIcon:ClearAllPoints()
+  btn.pinIcon:SetPoint("TOPLEFT", PIN_ICON_OFFSET_X * inset, PIN_ICON_OFFSET_Y * inset)
+  btn.pinIcon:SetSize(iconSize, iconSize)
+end
+
+function BarFrame:ApplyOverlayIconStyle(btn)
+  if not btn or not btn.overlayIcon then return end
+  local overlay = btn.overlayConfig
+  local baseSize = (btn.GetWidth and btn:GetWidth()) or self:GetButtonSize() or DEFAULT_BUTTON_SIZE
+  local scale = overlay and tonumber(overlay.scale) or OVERLAY_ICON_SCALE
+  local iconSize = overlay and tonumber(overlay.size) or math.floor(baseSize * scale)
+  local minSize = overlay and tonumber(overlay.minSize) or OVERLAY_ICON_MIN_SIZE
+  local maxSize = overlay and tonumber(overlay.maxSize) or OVERLAY_ICON_MAX_SIZE
+  local clampMax = (maxSize and maxSize > 0) and maxSize or iconSize
+  iconSize = math.max(minSize, math.min(clampMax, iconSize))
+  local offsetX = overlay and tonumber(overlay.offsetX) or OVERLAY_ICON_OFFSET_X
+  local offsetY = overlay and tonumber(overlay.offsetY) or OVERLAY_ICON_OFFSET_Y
+  local alpha = overlay and tonumber(overlay.alpha) or OVERLAY_ICON_ALPHA
+  btn.overlayIcon:ClearAllPoints()
+  btn.overlayIcon:SetPoint("CENTER", offsetX, offsetY)
+  btn.overlayIcon:SetSize(iconSize, iconSize)
+  btn.overlayIcon:SetAlpha(alpha)
 end
 
 function BarFrame:UpdateButtonFontSizes()
@@ -727,9 +910,12 @@ function BarFrame:UpdateButtonFontSizes()
   for _, btn in ipairs(self.buttons or {}) do
     applyFont(btn.count, countSize)
     applyFont(btn.hotkey, hotkeySize)
+    self:ApplyPinIconStyle(btn)
+    self:ApplyOverlayIconStyle(btn)
     for _, child in ipairs(btn.flyoutButtons or {}) do
       applyFont(child.count, countSize)
       applyFont(child.hotkey, hotkeySize)
+      self:ApplyOverlayIconStyle(child)
     end
   end
 end
@@ -770,6 +956,27 @@ end
 function BarFrame:UpdateAllHotkeys()
   for _, btn in ipairs(self.buttons or {}) do
     self:UpdateButtonHotkey(btn)
+  end
+end
+
+function BarFrame:TogglePinnedForButton(btn)
+  if not btn or not btn.itemData then return end
+  local moduleName = btn.itemData.module or (btn.groupData and btn.groupData.module)
+  if not moduleName then return end
+  local key = BarSmith:GetActionIdentityKey(btn.itemData)
+  if not key then return end
+
+  local pinned = BarSmith:GetPinnedForModule(moduleName)
+  if pinned and pinned == key then
+    BarSmith:ClearPinnedForModule(moduleName)
+  else
+    BarSmith:SetPinnedForModule(moduleName, btn.itemData)
+  end
+
+  if InCombatLockdown() then
+    BarSmith.pendingFill = true
+  else
+    BarSmith:RunAutoFill(true)
   end
 end
 
@@ -824,6 +1031,14 @@ function BarFrame:SetFlyoutItems(btn, children)
       if childBtn.hotkey then
         childBtn.hotkey:SetText("")
       end
+      childBtn.overlayConfig = nil
+      if childBtn.overlayIcon then
+        childBtn.overlayIcon:SetTexture(nil)
+        if childBtn.overlayIcon.SetAtlas then
+          childBtn.overlayIcon:SetAtlas(nil)
+        end
+        childBtn.overlayIcon:Hide()
+      end
       childBtn:Hide()
     end
   end
@@ -852,6 +1067,7 @@ function BarFrame:UpdateFlyoutPositions(btn)
       childBtn:SetPoint("LEFT", btn, "RIGHT", offset, 0)
     end
     childBtn:SetSize(buttonSize, buttonSize)
+    self:ApplyOverlayIconStyle(childBtn)
   end
 end
 
@@ -878,6 +1094,10 @@ end
 function BarFrame:HandleButtonPostClick(btn, button)
   if not btn or not btn.itemData then return end
   if btn.itemData.isPlaceholder then return end
+
+  if button == "LeftButton" and IsControlKeyDown() then
+    return
+  end
 
   -- Group parents use left-click to toggle flyout, not to execute an action.
   if btn.groupData and btn.flyoutItems and #btn.flyoutItems > 1 and button == "LeftButton" then
@@ -979,6 +1199,13 @@ function BarFrame:PromoteChildAsPrimary(parentBtn, childData)
   end
 
   local moduleName = parentBtn.groupData.module
+  if moduleName then
+    local pinned = BarSmith:GetPinnedForModule(moduleName)
+    if pinned and BarSmith:GetActionIdentityKey(childData) ~= pinned then
+      return
+    end
+  end
+
   if moduleName then
     self:SetModuleButton(moduleName, childData)
   end
@@ -1096,6 +1323,7 @@ function BarFrame:SetButton(index, itemData)
   btn.itemData = actionData
   self:ApplyButtonVisuals(btn, actionData)
   self:UpdateButtonHotkey(btn)
+  self:UpdateButtonPinnedIndicator(btn)
 
   btn:Show()
   return true
@@ -1153,6 +1381,17 @@ function BarFrame:ClearButton(index)
   btn.count:SetText("")
   if btn.hotkey then
     btn.hotkey:SetText("")
+  end
+  if btn.pinIcon then
+    btn.pinIcon:Hide()
+  end
+  btn.overlayConfig = nil
+  if btn.overlayIcon then
+    btn.overlayIcon:SetTexture(nil)
+    if btn.overlayIcon.SetAtlas then
+      btn.overlayIcon:SetAtlas(nil)
+    end
+    btn.overlayIcon:Hide()
   end
   btn.flyoutIndicator:SetText("")
   btn.border:SetAlpha(0)
@@ -1280,7 +1519,24 @@ function BarFrame:UpdateCooldowns()
     local durationObject
     local start, duration, enable = 0, 0, 1
 
-    if data.spellID then
+    if data.type == "housing_teleport" then
+      if data.hideCooldown then
+        if btn.cooldown then
+          btn.cooldown:Clear()
+        end
+        return
+      end
+      if C_Housing and C_Housing.GetVisitCooldownInfo then
+        local info = C_Housing.GetVisitCooldownInfo()
+        if info and info.isEnabled then
+          start = info.startTime or 0
+          duration = info.duration or 0
+          enable = 1
+        else
+          start, duration, enable = 0, 0, 0
+        end
+      end
+    elseif data.spellID then
       durationObject = C_Spell.GetSpellCooldownDuration(data.spellID)
     elseif data.itemID then
       start, duration, enable = C_Item.GetItemCooldown(data.itemID)
@@ -1363,7 +1619,7 @@ end
 -- Tooltip
 ------------------------------------------------------------------------
 
-function BarFrame:ShowButtonTooltip(btn)
+function BarFrame:ShowButtonTooltip(btn, isFlyoutChild)
   if not btn.itemData then return end
 
   GameTooltip:SetOwner(btn, "ANCHOR_RIGHT")
@@ -1381,6 +1637,7 @@ function BarFrame:ShowButtonTooltip(btn)
     hearthstone_item = { label = "Hearthstone", color = { 0.9, 0.6, 0.2 } },
     hearthstone_toy = { label = "Hearthstone (Toy)", color = { 0.9, 0.6, 0.2 } },
     engineer_teleport = { label = "Engineer Teleport", color = { 0.6, 0.9, 0.9 } },
+    housing_teleport = { label = "Housing Teleport", color = { 0.6, 0.9, 0.9 } },
     profession = { label = "Profession", color = { 0.8, 0.8, 1.0 } },
     placeholder = { label = "Empty Module", color = { 0.6, 0.6, 0.6 } },
     macro = { label = "Macro", color = { 0.9, 0.9, 0.5 } },
@@ -1420,8 +1677,12 @@ function BarFrame:ShowButtonTooltip(btn)
   end
   if btn.flyoutItems and #btn.flyoutItems > 1 then
     GameTooltip:AddLine("Shift-Right-click to Open Menu", 0.8, 0.8, 0.8)
+    GameTooltip:AddLine("Ctrl-Left-click a flyout item to pin/unpin", 0.8, 0.8, 0.8)
     -- local groupLabel = (btn.groupData and btn.groupData.name) or (#btn.flyoutItems .. " items")
     -- GameTooltip:AddLine(groupLabel, 0.8, 0.8, 0.8)
+  end
+  if isFlyoutChild then
+    GameTooltip:AddLine("Ctrl-Left-click to pin/unpin", 0.8, 0.8, 0.8)
   end
   if data.isPlaceholder then
     GameTooltip:AddLine("No items available in this category.", 0.8, 0.8, 0.8)

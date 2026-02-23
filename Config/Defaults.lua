@@ -66,6 +66,8 @@ BarSmith.DEFAULTS = {
     -- Per-module remembered "last used" action identity.
     -- Used to choose each module group's primary icon/action.
     lastUsedByModule = {},
+    -- Per-module pinned primary action identity (overrides last used when set).
+    pinnedByModule = {},
     exclude = {},
 
     -- Consumable sub-categories
@@ -148,6 +150,14 @@ function BarSmith:InitDB()
   -- Migration: fill in any missing keys from defaults
   self:MigrateDefaults(self.db, self.DEFAULTS.global)
   self:MigrateDefaults(self.chardb, self.DEFAULTS.char)
+
+  -- Sanity: recover from corrupted or legacy saved variables.
+  if type(self.chardb.modules) ~= "table" then
+    self.chardb.modules = CopyTable(self.DEFAULTS.char.modules)
+  end
+  if type(self.chardb.priority) ~= "table" or #self.chardb.priority == 0 then
+    self.chardb.priority = CopyTable(self.DEFAULTS.char.priority)
+  end
 
   -- Ensure priority list contains any newly added default modules.
   self:SyncPriorityWithDefaults()

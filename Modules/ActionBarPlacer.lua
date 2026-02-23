@@ -155,7 +155,7 @@ function Placer:PromoteLastUsedChild(moduleName, children)
     return
   end
 
-  local wantedKey = BarSmith:GetLastUsedForModule(moduleName)
+  local wantedKey = BarSmith:GetPinnedForModule(moduleName) or BarSmith:GetLastUsedForModule(moduleName)
   if not wantedKey then
     return
   end
@@ -298,7 +298,7 @@ function Placer:PlaceItems(items)
   barFrame:Show()
 
   if placed > 0 then
-    BarSmith:Print("Forged " .. placed .. " item(s) onto your BarSmith bar.")
+    BarSmith:Debug("Forged " .. placed .. " item(s) onto your BarSmith bar.")
   else
     BarSmith:Debug("No items to place.")
     barFrame:Hide()

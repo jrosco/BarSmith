@@ -85,7 +85,7 @@ function Mounts:GetItems()
       table.insert(items, {
         spellID = self.RANDOM_FAVORITE_MOUNT,
         name = "Summon Random Favorite Mount",
-        icon = 853211,       -- mount icon
+        icon = 413588, -- mount icon
         macrotext = "/dismount [mounted]\n/run if C_MountJournal and C_MountJournal.SummonByID then C_MountJournal.SummonByID(0) end",
         type = "mount",
       })

@@ -383,4 +383,27 @@ function BarSmith:GetLastUsedForModule(moduleName)
   return self.chardb.lastUsedByModule[moduleName]
 end
 
+function BarSmith:SetPinnedForModule(moduleName, data)
+  if not self.chardb or not moduleName then return end
+  local key = self:GetActionIdentityKey(data)
+  if not key then return end
+
+  self.chardb.pinnedByModule = self.chardb.pinnedByModule or {}
+  self.chardb.pinnedByModule[moduleName] = key
+end
+
+function BarSmith:ClearPinnedForModule(moduleName)
+  if not self.chardb or not moduleName or not self.chardb.pinnedByModule then
+    return
+  end
+  self.chardb.pinnedByModule[moduleName] = nil
+end
+
+function BarSmith:GetPinnedForModule(moduleName)
+  if not self.chardb or not self.chardb.pinnedByModule then
+    return nil
+  end
+  return self.chardb.pinnedByModule[moduleName]
+end
+
 

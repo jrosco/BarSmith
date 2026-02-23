@@ -7,6 +7,11 @@ local Hearthstones = BarSmith:NewModule("Hearthstones")
 
 -- The original Hearthstone item ID
 Hearthstones.HEARTHSTONE_ITEM = 6948
+Hearthstones.HOUSING_BUTTON_PREFIX = "BarSmithHousingTeleport"
+Hearthstones.HOUSING_ICON = 7252953
+Hearthstones.HOUSING_ICON_RETURN_ATLAS = "dashboard-panel-homestone-teleport-out-button"
+Hearthstones.HOUSING_OVERLAY_ALLIANCE = "UI-HUD-UnitFrame-Player-PVP-AllianceIcon"
+Hearthstones.HOUSING_OVERLAY_HORDE = "UI-HUD-UnitFrame-Player-PVP-HordeIcon"
 
 -- Known hearthstone toy IDs (all function identically to hearthstone)
 Hearthstones.HEARTHSTONE_TOYS = {
@@ -57,6 +62,204 @@ Hearthstones.ENGINEER_ITEMS = {
 }
 
 ------------------------------------------------------------------------
+-- Housing teleport secure button
+------------------------------------------------------------------------
+
+local function GetHousingHomeEntries(houseInfoList)
+  if not houseInfoList or #houseInfoList == 0 then
+    return {}
+  end
+
+  local entries = {}
+  for _, info in ipairs(houseInfoList) do
+    local uiMapID = C_Housing and C_Housing.GetUIMapIDForNeighborhood
+      and C_Housing.GetUIMapIDForNeighborhood(info.neighborhoodGUID)
+    local districtLabel
+    local overlayAtlas
+    if uiMapID == 2352 then
+      districtLabel = "Alliance"
+      overlayAtlas = Hearthstones.HOUSING_OVERLAY_ALLIANCE
+    elseif uiMapID == 2351 then
+      districtLabel = "Horde"
+      overlayAtlas = Hearthstones.HOUSING_OVERLAY_HORDE
+    end
+    local overlay = overlayAtlas and {
+      atlas = overlayAtlas,
+      scale = 0.5,
+      offsetX = 0,
+      offsetY = 0,
+      alpha = 0.9,
+    } or nil
+
+    local baseName = info.houseName or info.ownerName or "Home"
+    local name = districtLabel and (baseName .. " (" .. districtLabel .. ")") or baseName
+
+    table.insert(entries, {
+      neighborhoodGUID = info.neighborhoodGUID,
+      houseGUID = info.houseGUID,
+      plotID = info.plotID,
+      houseName = info.houseName,
+      ownerName = info.ownerName,
+      uiMapID = uiMapID,
+      label = districtLabel,
+      overlay = overlay,
+      displayName = name,
+    })
+  end
+
+  table.sort(entries, function(a, b)
+    if a.uiMapID and b.uiMapID and a.uiMapID ~= b.uiMapID then
+      return a.uiMapID < b.uiMapID
+    end
+    return (a.displayName or "") < (b.displayName or "")
+  end)
+
+  return entries
+end
+
+function Hearthstones:EnsureHousingButtons(count)
+  if not self.housingButtons then
+    self.housingButtons = {}
+  end
+
+  for i = 1, count do
+    if not self.housingButtons[i] then
+      local name = self.HOUSING_BUTTON_PREFIX .. i
+      local btn = CreateFrame("Button", name, UIParent, "SecureActionButtonTemplate")
+      btn:SetSize(1, 1)
+      btn:SetPoint("BOTTOMRIGHT", UIParent, "TOPLEFT", -1, -1)
+      btn:RegisterForClicks("AnyDown", "AnyUp")
+      self.housingButtons[i] = btn
+    end
+  end
+end
+
+function Hearthstones:ApplyHousingTeleport()
+  if not self.housingHomes or #self.housingHomes == 0 then
+    if self.housingButtons then
+      for _, btn in ipairs(self.housingButtons) do
+        btn:SetAttribute("type", nil)
+        btn:SetAttribute("house-neighborhood-guid", nil)
+        btn:SetAttribute("house-guid", nil)
+        btn:SetAttribute("house-plot-id", nil)
+      end
+    end
+    self.housingReturnActive = false
+    self.housingPendingUpdate = false
+    return
+  end
+
+  self:EnsureHousingButtons(#self.housingHomes)
+  if not self.housingButtons then return end
+
+  if InCombatLockdown() then
+    self.housingPendingUpdate = true
+    return
+  end
+
+  self.housingPendingUpdate = false
+  local canReturn = C_HousingNeighborhood
+    and C_HousingNeighborhood.CanReturnAfterVisitingHouse
+    and C_HousingNeighborhood.CanReturnAfterVisitingHouse()
+  self.housingReturnActive = canReturn == true
+  for i, home in ipairs(self.housingHomes) do
+    local btn = self.housingButtons[i]
+    if btn then
+      if self.housingReturnActive then
+        btn:SetAttribute("type", "returnhome")
+        btn:SetAttribute("house-neighborhood-guid", nil)
+        btn:SetAttribute("house-guid", nil)
+        btn:SetAttribute("house-plot-id", nil)
+      else
+        btn:SetAttribute("type", "teleporthome")
+        btn:SetAttribute("house-neighborhood-guid", home.neighborhoodGUID)
+        btn:SetAttribute("house-guid", home.houseGUID)
+        btn:SetAttribute("house-plot-id", home.plotID)
+      end
+    end
+  end
+end
+
+function Hearthstones:ApplyPendingHousingUpdate()
+  if self.housingPendingUpdate then
+    self:ApplyHousingTeleport()
+  end
+end
+
+function Hearthstones:OnHouseListUpdated(houseInfoList)
+  self.housingHomes = GetHousingHomeEntries(houseInfoList)
+  self:ApplyHousingTeleport()
+
+  if BarSmith.chardb and BarSmith.chardb.enabled and BarSmith.chardb.autoFill then
+    if InCombatLockdown() then
+      BarSmith.pendingFill = true
+    else
+      BarSmith:RunAutoFill()
+    end
+  end
+end
+
+function Hearthstones:OnHousingStateChanged()
+  self:ApplyHousingTeleport()
+  if BarSmith.chardb and BarSmith.chardb.enabled and BarSmith.chardb.autoFill then
+    if InCombatLockdown() then
+      BarSmith.pendingFill = true
+    else
+      BarSmith:RunAutoFill()
+    end
+  end
+  self:QueueHousingStateRefresh()
+end
+
+function Hearthstones:QueueHousingStateRefresh()
+  if self.housingStateTimer then return end
+
+  local function refresh()
+    self.housingStateTimer = nil
+    local wasReturn = self.housingReturnActive
+    self:ApplyHousingTeleport()
+    if wasReturn ~= self.housingReturnActive and BarSmith.chardb and BarSmith.chardb.enabled and BarSmith.chardb.autoFill then
+      if InCombatLockdown() then
+        BarSmith.pendingFill = true
+      else
+        BarSmith:RunAutoFill()
+      end
+    end
+  end
+
+  self.housingStateTimer = C_Timer.NewTimer(0.5, function()
+    refresh()
+    if not self.housingReturnActive then
+      self.housingStateTimer = C_Timer.NewTimer(1.0, refresh)
+    end
+  end)
+end
+
+if C_Housing and C_Housing.GetPlayerOwnedHouses then
+  BarSmith:RegisterEvent("PLAYER_HOUSE_LIST_UPDATED", function(self, event, houseInfoList)
+    local mod = self:GetModule("Hearthstones")
+    if mod then
+      mod:OnHouseListUpdated(houseInfoList)
+    end
+  end)
+end
+
+if C_HousingNeighborhood and C_HousingNeighborhood.CanReturnAfterVisitingHouse then
+  BarSmith:RegisterEvent("HOUSE_PLOT_ENTERED", function(self)
+    local mod = self:GetModule("Hearthstones")
+    if mod then
+      mod:OnHousingStateChanged()
+    end
+  end)
+  BarSmith:RegisterEvent("HOUSE_PLOT_EXITED", function(self)
+    local mod = self:GetModule("Hearthstones")
+    if mod then
+      mod:OnHousingStateChanged()
+    end
+  end)
+end
+
+------------------------------------------------------------------------
 -- Gather hearthstone entries for the action bar
 ------------------------------------------------------------------------
 
@@ -68,6 +271,11 @@ function Hearthstones:GetItems()
   end
 
   local prefs = BarSmith.chardb.hearthstones
+
+  if not self.housingRequested and C_Housing and C_Housing.GetPlayerOwnedHouses then
+    self.housingRequested = true
+    C_Housing.GetPlayerOwnedHouses()
+  end
 
   local function AddToyHearthstone(toyID)
     if not (PlayerHasToy(toyID) and C_ToyBox.IsToyUsable(toyID)) then
@@ -139,6 +347,30 @@ function Hearthstones:GetItems()
           end
         end
       end
+    end
+  end
+
+  -- 5. Housing teleports
+  if self.housingHomes and #self.housingHomes > 0 then
+    for i, home in ipairs(self.housingHomes) do
+      local housingName
+      if self.housingReturnActive then
+        housingName = "Leave Home"
+      else
+        housingName = "Teleport Home"
+      end
+      if home.displayName then
+        housingName = housingName .. ": " .. home.displayName
+      end
+      table.insert(items, {
+        name = housingName,
+        icon = self.housingReturnActive and nil or self.HOUSING_ICON,
+        iconAtlas = self.housingReturnActive and self.HOUSING_ICON_RETURN_ATLAS or nil,
+        overlay = home.overlay,
+        macrotext = "/click " .. self.HOUSING_BUTTON_PREFIX .. i,
+        type = "housing_teleport",
+        hideCooldown = self.housingReturnActive == true,
+      })
     end
   end
 

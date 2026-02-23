@@ -240,6 +240,11 @@ BarSmith:RegisterEvent("PLAYER_REGEN_ENABLED", function(self)
       BarSmith:RunAutoFill(force)
     end)
   end
+
+  local hearthstones = self:GetModule("Hearthstones")
+  if hearthstones and hearthstones.ApplyPendingHousingUpdate then
+    hearthstones:ApplyPendingHousingUpdate()
+  end
 end)
 
 -- Re-fill when talent spec changes (class spells may change)
