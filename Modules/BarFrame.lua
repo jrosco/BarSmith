@@ -320,6 +320,7 @@ function BarFrame:EnsureModuleButtons()
     "classSpells",
     "professions",
     "mounts",
+    "toys",
     "hearthstones",
     "macros",
   }
@@ -732,7 +733,7 @@ function BarFrame:SetButtonAction(btn, data, clickButton)
     return
   end
 
-  if data.type == "hearthstone_toy" and data.toyID then
+  if (data.type == "hearthstone_toy" or data.type == "toy") and data.toyID then
     btn:SetAttribute("type" .. attrPrefix, "toy")
     btn:SetAttribute("toy" .. attrPrefix, data.toyID)
   elseif data.type == "trinket" and data.slotID then
@@ -1122,7 +1123,7 @@ function BarFrame:HandleButtonPostClick(btn, button)
 end
 
 ------------------------------------------------------------------------
--- Drag & drop support for consumable includes
+-- Drag & drop support for includes
 ------------------------------------------------------------------------
 
 function BarFrame:HandleReceiveDrag(btn)
@@ -1136,6 +1137,17 @@ function BarFrame:HandleReceiveDrag(btn)
   if not cursorType or not id then
     ClearCursor()
     return
+  end
+
+  local function isToyItem(itemID)
+    if not itemID then return false end
+    if C_ToyBox and C_ToyBox.IsToyItem and C_ToyBox.IsToyItem(itemID) then
+      return true
+    end
+    if PlayerHasToy and PlayerHasToy(itemID) then
+      return true
+    end
+    return false
   end
 
   if cursorType == "macro" then
@@ -1166,11 +1178,25 @@ function BarFrame:HandleReceiveDrag(btn)
         end
       end
     end
-  elseif cursorType == "item" then
-    BarSmith:RemoveFromExcludeForItemID(id)
-    local con = BarSmith:GetModule("Consumables")
-    if con and con:AddExtraItem(id) then
+  elseif cursorType == "toy" then
+    BarSmith:RemoveFromExcludeForToyID(id)
+    local toys = BarSmith:GetModule("Toys")
+    if toys and toys:AddExtraToy(id) then
       BarSmith:RunAutoFill(true)
+    end
+  elseif cursorType == "item" then
+    if isToyItem(id) then
+      BarSmith:RemoveFromExcludeForToyID(id)
+      local toys = BarSmith:GetModule("Toys")
+      if toys and toys:AddExtraToy(id) then
+        BarSmith:RunAutoFill(true)
+      end
+    else
+      BarSmith:RemoveFromExcludeForItemID(id)
+      local con = BarSmith:GetModule("Consumables")
+      if con and con:AddExtraItem(id) then
+        BarSmith:RunAutoFill(true)
+      end
     end
   elseif cursorType == "mount" then
     local _, spellID = C_MountJournal.GetMountInfoByID(id)
@@ -1634,6 +1660,7 @@ function BarFrame:ShowButtonTooltip(btn, isFlyoutChild)
     trinket = { label = "Trinket", color = { 1.0, 0.85, 0.2 } },
     class_spell = { label = "Class Spell", color = { 0.5, 0.9, 1.0 } },
     mount = { label = "Mount", color = { 0.6, 0.9, 0.6 } },
+    toy = { label = "Toy", color = { 0.9, 0.75, 0.25 } },
     hearthstone_item = { label = "Hearthstone", color = { 0.9, 0.6, 0.2 } },
     hearthstone_toy = { label = "Hearthstone (Toy)", color = { 0.9, 0.6, 0.2 } },
     engineer_teleport = { label = "Engineer Teleport", color = { 0.6, 0.9, 0.9 } },
@@ -1692,7 +1719,7 @@ function BarFrame:ShowButtonTooltip(btn, isFlyoutChild)
     if data.type == "macro" then
       GameTooltip:AddLine("Drag a macro to assign it to this slot", 0.8, 0.8, 0.8)
     else
-      GameTooltip:AddLine("Drag a Consumable, Mount, or Spell to include (clears from exclude)", 0.8, 0.8, 0.8)
+      GameTooltip:AddLine("Drag a Consumable, Toy, Mount, or Spell to include (clears from exclude)", 0.8, 0.8, 0.8)
     end
   end
   GameTooltip:Show()

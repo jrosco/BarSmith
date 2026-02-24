@@ -83,6 +83,7 @@ function Placer:GatherItems()
     classSpells  = function() return BarSmith:GetModule("ClassSpells"):GetItems() end,
     professions  = function() return BarSmith:GetModule("Professions"):GetItems() end,
     mounts       = function() return BarSmith:GetModule("Mounts"):GetItems() end,
+    toys         = function() return BarSmith:GetModule("Toys"):GetItems() end,
     hearthstones = function() return BarSmith:GetModule("Hearthstones"):GetItems() end,
     macros       = function() return BarSmith:GetModule("Macros"):GetItems() end,
   }
@@ -130,6 +131,7 @@ Placer.MODULE_LABELS = {
   classSpells  = "Class Spells",
   professions  = "Professions",
   mounts       = "Mounts",
+  toys         = "Toys",
   hearthstones = "Hearthstones",
   macros       = "Macros",
 }
@@ -146,6 +148,7 @@ Placer.MODULE_PLACEHOLDER_ICONS = {
   classSpells  = "Interface\\Icons\\Ability_Marksmanship",
   professions  = "Interface\\Icons\\Trade_BlackSmithing",
   mounts       = "Interface\\Icons\\Ability_Mount_RidingHorse",
+  toys         = "Interface\\Icons\\INV_Misc_Toy_02",
   hearthstones = "Interface\\Icons\\INV_Misc_Rune_01",
   macros       = "Interface\\Icons\\INV_Misc_QuestionMark",
 }

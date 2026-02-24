@@ -55,6 +55,7 @@ function BarFrameSettings:BuildIncludeExcludeList()
   local includeBandages = {}
   local includeUtilities = {}
   local includeMounts = {}
+  local includeToys = {}
   local includeSpells = {}
   local includeMacros = {}
   local excludeEntries = {}
@@ -85,6 +86,34 @@ function BarFrameSettings:BuildIncludeExcludeList()
       label = name .. " (" .. tostring(spellID) .. ")"
     end
     addItem(target, label, icon, entryData)
+  end
+
+  local function addToyEntry(target, toyID, entryData)
+    if not toyID then return end
+    local toyName, toyIcon
+    if C_ToyBox and C_ToyBox.GetToyInfo then
+      local name, icon = C_ToyBox.GetToyInfo(toyID)
+      if type(name) == "table" then
+        toyName = name.name
+        toyIcon = name.icon
+      else
+        toyName = name
+        toyIcon = icon
+      end
+    end
+    if not toyName then
+      local name, _, _, _, _, _, _, _, _, icon = C_Item.GetItemInfo(toyID)
+      toyName = name
+      toyIcon = toyIcon or icon
+      if not name then
+        C_Item.RequestLoadItemDataByID(toyID)
+      end
+    end
+    local label = toyName or ("Toy " .. tostring(toyID))
+    if toyName then
+      label = toyName .. " (" .. tostring(toyID) .. ")"
+    end
+    addItem(target, label, toyIcon, entryData)
   end
 
   for itemID, enabled in pairs(include.potions or {}) do
@@ -125,6 +154,13 @@ function BarFrameSettings:BuildIncludeExcludeList()
     end
   end
 
+  local toyInclude = chardb.toys and chardb.toys.include or {}
+  for toyID, enabled in pairs(toyInclude) do
+    if enabled then
+      addToyEntry(includeToys, toyID, { kind = "include_toy", toyID = toyID })
+    end
+  end
+
   local customSpellIDs = chardb.classSpells and chardb.classSpells.customSpellIDs or {}
   for _, spellID in ipairs(customSpellIDs) do
     addSpellEntry(includeSpells, spellID, { kind = "include_spell", spellID = spellID })
@@ -146,6 +182,8 @@ function BarFrameSettings:BuildIncludeExcludeList()
       local prefix, id = key:match("^(%w+):(.+)$")
       if prefix == "item" then
         addItemEntry(excludeEntries, tonumber(id), "Item", { kind = "exclude", key = key })
+      elseif prefix == "toy" then
+        addToyEntry(excludeEntries, tonumber(id), { kind = "exclude", key = key })
       elseif prefix == "spell" then
         addSpellEntry(excludeEntries, tonumber(id), { kind = "exclude", key = key })
       elseif prefix == "name" then
@@ -162,6 +200,7 @@ function BarFrameSettings:BuildIncludeExcludeList()
   addSection("Include: Bandages", includeBandages, { 0.85, 0.85, 0.85 })
   addSection("Include: Utilities", includeUtilities, { 1.0, 0.65, 0.3 })
   addSection("Include: Mounts", includeMounts, { 0.5, 0.85, 0.6 })
+  addSection("Include: Toys", includeToys, { 0.9, 0.75, 0.25 })
   addSection("Include: Class Spells", includeSpells, { 0.5, 0.85, 1.0 })
   addSection("Macros", includeMacros, { 0.95, 0.9, 0.5 })
   addSection("Exclude", excludeEntries, { 1.0, 0.35, 0.35 })
@@ -369,6 +408,11 @@ function BarFrameSettings:UpdateIncludeExcludeFrame()
           local mounts = BarSmith.chardb and BarSmith.chardb.mounts and BarSmith.chardb.mounts.include
           if mounts then
             mounts[data.mountID] = nil
+          end
+        elseif data.kind == "include_toy" and data.toyID then
+          local toys = BarSmith.chardb and BarSmith.chardb.toys and BarSmith.chardb.toys.include
+          if toys then
+            toys[data.toyID] = nil
           end
         elseif data.kind == "include_spell" and data.spellID then
           local spells = BarSmith.chardb and BarSmith.chardb.classSpells and BarSmith.chardb.classSpells.customSpellIDs
