@@ -24,7 +24,7 @@ function QuestItems:GetItems()
       local link, icon, charges, showWhenComplete = GetQuestLogSpecialItemInfo(i)
       if link then
         local itemID = GetItemInfoFromHyperlink(link)
-        if itemID and not self:IsDuplicate(items, itemID) then
+        if itemID then
           table.insert(items, {
             itemID = itemID,
             name = questInfo.title or "Quest Item",
@@ -54,7 +54,7 @@ function QuestItems:GetItems()
   if scanner then
     local bagResults = scanner:ScanBags()
     for _, entry in ipairs(bagResults.questItems) do
-      if scanner:IsUsableItem(entry.itemID) and not self:IsDuplicate(items, entry.itemID) then
+      if scanner:IsUsableItem(entry.itemID, entry.bag, entry.slot) then
         entry.type = "quest_item"
         table.insert(items, entry)
       end
@@ -78,7 +78,7 @@ function QuestItems:CheckQuestForItem(questID, items)
   local link, icon, charges = GetQuestLogSpecialItemInfo(questLogIndex)
   if link then
     local itemID = GetItemInfoFromHyperlink(link)
-    if itemID and not self:IsDuplicate(items, itemID) then
+    if itemID then
       local questInfo = C_QuestLog.GetInfo(questLogIndex)
       table.insert(items, {
         itemID = itemID,
@@ -92,15 +92,3 @@ function QuestItems:CheckQuestForItem(questID, items)
   end
 end
 
-------------------------------------------------------------------------
--- Dedup helper
-------------------------------------------------------------------------
-
-function QuestItems:IsDuplicate(items, itemID)
-  for _, item in ipairs(items) do
-    if item.itemID == itemID then
-      return true
-    end
-  end
-  return false
-end

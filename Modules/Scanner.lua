@@ -68,6 +68,12 @@ function Scanner:ClassifyItem(info, bag, slot, results)
   itemSubType, itemStackCount, itemEquipLoc, itemTexture,
   sellPrice, classID, subclassID, bindType, expacID = C_Item.GetItemInfo(itemID)
 
+  if not classID then
+    local _, _, _, _, _, classIDInstant, subclassIDInstant = C_Item.GetItemInfoInstant(itemID)
+    classID = classIDInstant
+    subclassID = subclassIDInstant
+  end
+
   -- Item info may not be cached yet
   if not classID then
     -- Fallback: check if it's a quest item via tooltip
@@ -136,9 +142,21 @@ end
 -- Check if an item is usable (has a Use: effect)
 ------------------------------------------------------------------------
 
-function Scanner:IsUsableItem(itemID)
+function Scanner:IsUsableItem(itemID, bag, slot)
+  -- Prefer bag/slot API (works even when cache is cold)
+  if bag and slot and C_Container and C_Container.GetContainerItemSpell then
+    local spellName = C_Container.GetContainerItemSpell(bag, slot)
+    if spellName then
+      return true
+    end
+  end
+
+  if not itemID then
+    return false
+  end
+
   -- C_Item.GetItemSpell returns the spell associated with "Use:" effect
-  local spellName, spellID = C_Item.GetItemSpell(itemID)
+  local spellName = C_Item.GetItemSpell(itemID)
   return spellName ~= nil
 end
 
@@ -155,3 +173,4 @@ function Scanner:SortByQuality(items)
   end)
   return items
 end
+

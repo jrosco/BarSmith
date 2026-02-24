@@ -26,6 +26,19 @@ function Mounts:AddExtraMount(mountID)
   return true
 end
 
+function Mounts:RemoveExtraMount(mountID)
+  if not mountID then return false end
+  if not BarSmith.chardb or not BarSmith.chardb.mounts then
+    return false
+  end
+  local include = BarSmith.chardb.mounts.include
+  if include and include[mountID] then
+    include[mountID] = nil
+    return true
+  end
+  return false
+end
+
 ------------------------------------------------------------------------
 -- Gather mount entries for the action bar
 ------------------------------------------------------------------------

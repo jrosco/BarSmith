@@ -12,6 +12,9 @@ local BAR_PADDING = 4
 local HOVER_HIT_INSET = math.max(2, math.ceil(BUTTON_PADDING / 2))
 local HIDE_DELAY = 0.3
 local TOOLTIP_ICON = "|TInterface\\AddOns\\BarSmith\\Textures\\bs:14:14:0:0|t"
+local TOOLTIP_TITLE_COLOR = "|cff33ccff"
+local TOOLTIP_ACTION_REMOVE_COLOR = "|cffff9a9a"
+local TOOLTIP_SHORTCUT_COLOR = "|cffffffff"
 local PREVIEW_ICONS = {
   "Interface\\Icons\\INV_Potion_93",
   "Interface\\Icons\\INV_Misc_Food_60",
@@ -148,7 +151,7 @@ function QuickBar:Init()
       return
     end
     if hasItems == 0 then
-      BarSmith:Print("QuickBar is empty. Alt-Right-click an item/spell on the BarSmith bar to add it.")
+      BarSmith:Print("QuickBar is empty. Alt-Left-click an item/spell on the BarSmith bar to add it.")
     end
   end)
   self:UpdateToggleState()
@@ -385,7 +388,10 @@ function QuickBar:ShowButtonTooltip(btn)
   end
   GameTooltip:AddLine(" ")
   GameTooltip:AddLine(TOOLTIP_ICON .. " |cff33ccff[BarSmith QuickBar]|r", 0.5, 0.5, 0.5)
-  GameTooltip:AddLine("Alt-Right-click to remove", 0.8, 0.8, 0.8)
+  GameTooltip:AddLine(" ")
+  GameTooltip:AddLine(TOOLTIP_TITLE_COLOR .. "Actions|r", 1, 1, 1)
+  GameTooltip:AddLine(TOOLTIP_ACTION_REMOVE_COLOR .. "Remove|r: " ..
+    TOOLTIP_SHORTCUT_COLOR .. "Alt + Right Click|r", 0.8, 0.8, 0.8)
   GameTooltip:Show()
 end
 
@@ -491,7 +497,7 @@ end
 function QuickBar:SetButtonFromData(btn, data)
   local barFrame = BarSmith:GetModule("BarFrame")
   if barFrame and barFrame.SetButtonAction then
-    barFrame:SetButtonAction(btn, data, nil)
+    barFrame:SetButtonAction(btn, data, nil, true)
     barFrame:ApplyButtonVisuals(btn, data)
   end
 end
@@ -555,7 +561,7 @@ function QuickBar:ShowAtCursor()
     return
   end
   if self:GetActiveCount() <= 0 then
-    BarSmith:Print("QuickBar is empty. Alt-Right-click an item/spell on the BarSmith bar to add it.")
+    BarSmith:Print("QuickBar is empty. Alt-Left-click an item/spell on the BarSmith bar to add it.")
     return
   end
   if InCombatLockdown() then

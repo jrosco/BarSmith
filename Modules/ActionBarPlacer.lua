@@ -68,6 +68,8 @@ end
 
 function Placer:GatherItems()
   local allItems = {}
+  local seen = {}
+  local autoAddedKeys = {}
   local priority = (BarSmith.GetExpandedPriority and BarSmith:GetExpandedPriority()) or BarSmith.chardb.priority
 
   -- Map of module name -> getter function
@@ -100,16 +102,31 @@ function Placer:GatherItems()
       if ok and items then
         for _, item in ipairs(items) do
           if not BarSmith:IsExcluded(item) then
-            item.module = modName
-            table.insert(allItems, item)
+            local key = BarSmith:GetActionIdentityKey(item)
+            local isAuto = not BarSmith:IsManualItem(item)
+            item.autoAdded = isAuto
+            if key then
+              if not seen[key] then
+                seen[key] = true
+                item.module = modName
+                if isAuto then
+                  autoAddedKeys[key] = true
+                end
+                table.insert(allItems, item)
+              end
+            else
+              item.module = modName
+              table.insert(allItems, item)
+            end
           end
         end
       elseif not ok then
-        BarSmith:Debug("Error gathering from " .. modName .. ": " .. tostring(items))
+        BarSmith:ReportError("Error gathering from " .. modName .. ": " .. tostring(items))
       end
     end
   end
 
+  BarSmith:SetAutoAddedKeys(autoAddedKeys)
   return allItems
 end
 
@@ -268,7 +285,7 @@ function Placer:PlaceItems(items)
 
   local barFrame = BarSmith:GetModule("BarFrame")
   if not barFrame then
-    BarSmith:Print("Error: BarFrame module not found.")
+    BarSmith:ReportError("BarFrame module not found.")
     return
   end
 

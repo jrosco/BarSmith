@@ -69,6 +69,7 @@ BarSmith.DEFAULTS = {
     -- Per-module pinned primary action identity (overrides last used when set).
     pinnedByModule = {},
     exclude = {},
+    autoAdded = {},
 
     -- Consumable sub-categories
     consumables = {
