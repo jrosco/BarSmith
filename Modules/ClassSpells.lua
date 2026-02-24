@@ -74,7 +74,7 @@ ClassSpells.CLASS_SPELLS = {
     { spellID = 104773, category = "defensive" },      -- Unending Resolve
     { spellID = 20707,  category = "utility" },        -- Soulstone
     { spellID = 698,    category = "utility" },        -- Ritual of Summoning
-    { spellID = 5512,   category = "utility" },        -- Healthstone
+    { spellID = 6201,   category = "utility" },        -- Healthstone
   },
   MONK = {
     { spellID = 116705, category = "interrupt" },      -- Spear Hand Strike
@@ -123,6 +123,26 @@ function ClassSpells:AddCustomSpell(spellID)
   table.insert(list, spellID)
   BarSmith:Print("Added custom spell: " .. tostring(spellID))
   return true
+end
+
+function ClassSpells:RemoveCustomSpell(spellID)
+  if not spellID or not BarSmith.chardb or not BarSmith.chardb.classSpells then
+    return false
+  end
+
+  local list = BarSmith.chardb.classSpells.customSpellIDs
+  if type(list) ~= "table" then
+    return false
+  end
+
+  for i, id in ipairs(list) do
+    if id == spellID then
+      table.remove(list, i)
+      return true
+    end
+  end
+
+  return false
 end
 
 ------------------------------------------------------------------------
@@ -188,11 +208,13 @@ end
 ------------------------------------------------------------------------
 
 function ClassSpells:IsSpellKnown(spellID)
-  -- 12.0: C_Spell.IsSpellDataCached / IsPlayerSpell
-  if IsPlayerSpell and IsPlayerSpell(spellID) then
+  if not spellID or not C_SpellBook then
+    return false
+  end
+  if C_SpellBook.IsSpellKnown and C_SpellBook.IsSpellKnown(spellID) then
     return true
   end
-  if IsSpellKnown and IsSpellKnown(spellID) then
+  if C_SpellBook.IsSpellInSpellBook and C_SpellBook.IsSpellInSpellBook(spellID) then
     return true
   end
   return false

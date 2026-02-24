@@ -55,6 +55,13 @@ local MOUSE_LEAVE_CHECK_DELAY = 1
 local DEFAULT_FONT_SCALE = 36
 local HOVER_HIT_INSET = BUTTON_PADDING
 local TOOLTIP_ICON = "|TInterface\\AddOns\\BarSmith\\Textures\\bs:14:14:0:0|t"
+local TOOLTIP_TITLE_COLOR = "|cff33ccff"
+local TOOLTIP_ACTION_MENU_COLOR = "|cffdddddd"
+local TOOLTIP_ACTION_ADD_COLOR = "|cff7fd9ff"
+local TOOLTIP_ACTION_PIN_COLOR = "|cffb7a6ff"
+local TOOLTIP_ACTION_REMOVE_COLOR = "|cffff9a9a"
+local TOOLTIP_SHORTCUT_COLOR = "|cffffffff"
+local TOOLTIP_NOTE_COLOR = "|cffb3b3b3"
 local FLYOUT_SECURE_SHOW = [[
   local count = self:GetAttribute("bs_flyout_count") or 0
   if count <= 1 then return end
@@ -109,11 +116,15 @@ local FLYOUT_SECURE_HIDE_CHILD = [[
 ]]
 
 local function IsSettingsClick(button)
-  return button == "RightButton" and IsShiftKeyDown()
+  return button == "RightButton" and IsShiftKeyDown() and not IsControlKeyDown() and not IsAltKeyDown()
 end
 
 local function IsQuickBarAddClick(button)
-  return button == "RightButton" and IsAltKeyDown()
+  return button == "LeftButton" and IsAltKeyDown()
+end
+
+local function IsExcludeRemoveClick(button)
+  return button == "RightButton" and IsShiftKeyDown() and IsControlKeyDown()
 end
 
 
@@ -236,15 +247,6 @@ function BarFrame:Init()
   end)
   self.dragAnchor:EnableMouse(true)
 
-  -- Shift+Right-click anywhere on the bar to open menu
-  self.frame:SetScript("OnMouseUp", function(f, button)
-    if IsSettingsClick(button) then
-      local settings = BarSmith:GetModule("BarFrameSettings")
-      if settings and settings.ToggleIncludeExcludeFrame then
-        settings:ToggleIncludeExcludeFrame(f)
-      end
-    end
-  end)
   self.frame:HookScript("OnEnter", function()
     self:NotifyMouseEnter()
   end)
@@ -536,10 +538,6 @@ function BarFrame:CreateButton(index)
 
   -- HookScript preserves ActionButtonTemplate's existing OnMouseUp handler
   btn:HookScript("OnMouseUp", function(b, button)
-    if button == "LeftButton" and IsControlKeyDown() then
-      self:TogglePinnedForButton(b)
-      return
-    end
     if IsSettingsClick(button) then
       local settings = BarSmith:GetModule("BarFrameSettings")
       if settings and settings.ToggleIncludeExcludeFrame then
@@ -547,16 +545,9 @@ function BarFrame:CreateButton(index)
       end
       return
     end
-    if IsQuickBarAddClick(button) and b.itemData then
-      local quickBar = BarSmith:GetModule("QuickBar")
-      if quickBar and quickBar.AddFromItemData then
-        quickBar:AddFromItemData(b.itemData)
-      end
-      return
-    end
   end)
   btn:HookScript("PostClick", function(b, button)
-    if button == "RightButton" and IsAltKeyDown() then
+    if IsQuickBarAddClick(button) then
       return
     end
     self:HandleButtonPostClick(b, button)
@@ -626,16 +617,14 @@ function BarFrame:CreateFlyoutButtons(parentBtn)
       self:HandleReceiveDrag(b)
     end)
     child:HookScript("OnMouseUp", function(b, button)
+      if IsExcludeRemoveClick(button) then
+        return
+      end
       if button == "LeftButton" and IsControlKeyDown() then
         self:TogglePinnedForButton(b)
         return
       end
-      if IsSettingsClick(button) then
-        local settings = BarSmith:GetModule("BarFrameSettings")
-        if settings and settings.ToggleIncludeExcludeFrame then
-          settings:ToggleIncludeExcludeFrame(parentBtn)
-        end
-      elseif IsQuickBarAddClick(button) and b and b.itemData then
+      if IsQuickBarAddClick(button) and b and b.itemData then
         local quickBar = BarSmith:GetModule("QuickBar")
         if quickBar and quickBar.AddFromItemData then
           quickBar:AddFromItemData(b.itemData)
@@ -643,7 +632,7 @@ function BarFrame:CreateFlyoutButtons(parentBtn)
       end
     end)
     child:SetScript("PostClick", function(b, button)
-      if button == "RightButton" and IsAltKeyDown() then
+      if IsQuickBarAddClick(button) then
         return
       end
       self:HandleButtonPostClick(b, button)
@@ -669,7 +658,7 @@ end
 -- Assign an item/spell/toy/trinket to a button
 ------------------------------------------------------------------------
 
-function BarFrame:SetButtonAction(btn, data, clickButton)
+function BarFrame:SetButtonAction(btn, data, clickButton, allowRightClick)
   -- Reset all action attributes first
   btn:SetAttribute("type", nil)
   btn:SetAttribute("spell", nil)
@@ -715,6 +704,11 @@ function BarFrame:SetButtonAction(btn, data, clickButton)
   if data.macrotext then
     btn:SetAttribute("type" .. attrPrefix, "macro")
     btn:SetAttribute("macrotext" .. attrPrefix, data.macrotext)
+    if not allowRightClick then
+      -- Disable right-click actions; reserved for menu/exclude/remove.
+      btn:SetAttribute("type2", "macro")
+      btn:SetAttribute("macrotext2", "/stopmacro")
+    end
     -- Reserve modified clicks for menu/exclude without triggering the macro.
     btn:SetAttribute("alt-type", "macro")
     btn:SetAttribute("alt-macrotext", "/stopmacro")
@@ -758,6 +752,10 @@ function BarFrame:SetButtonAction(btn, data, clickButton)
   end
 
   -- Reserve modified clicks for menu/exclude without triggering the action.
+  if not allowRightClick then
+    btn:SetAttribute("type2", "macro")
+    btn:SetAttribute("macrotext2", "/stopmacro")
+  end
   btn:SetAttribute("alt-type", "macro")
   btn:SetAttribute("alt-macrotext", "/stopmacro")
   btn:SetAttribute("alt-type1", "macro")
@@ -1096,6 +1094,10 @@ function BarFrame:HandleButtonPostClick(btn, button)
   if not btn or not btn.itemData then return end
   if btn.itemData.isPlaceholder then return end
 
+  if IsSettingsClick(button) then
+    return
+  end
+
   if button == "LeftButton" and IsControlKeyDown() then
     return
   end
@@ -1105,13 +1107,68 @@ function BarFrame:HandleButtonPostClick(btn, button)
     return
   end
 
-  if button == "LeftButton" and IsAltKeyDown and IsAltKeyDown() then
+  if IsExcludeRemoveClick(button) then
+    if not btn.parentButton then
+      return
+    end
     if InCombatLockdown() then
     BarSmith:Print("Cannot exclude during combat.")
       return
     end
-    BarSmith:AddToExclude(btn.itemData)
-    BarSmith:Print("Excluded: " .. (btn.itemData.name or "Unknown"))
+    local data = btn.itemData
+    local isAuto = data.autoAdded
+    if isAuto == nil then
+      isAuto = BarSmith:IsAutoAdded(data)
+    end
+
+    if isAuto then
+      BarSmith:AddToExclude(data)
+      BarSmith:Print("Excluded: " .. (data.name or "Unknown"))
+    else
+      local removed = false
+      local macros = BarSmith:GetModule("Macros")
+      if data.type == "macro" or data.slotIndex then
+        if macros and data.slotIndex then
+          macros:ClearSlot(data.slotIndex)
+          removed = true
+        end
+      end
+
+      if data.type == "class_spell" and data.spellID then
+        local classSpells = BarSmith:GetModule("ClassSpells")
+        if classSpells and classSpells.RemoveCustomSpell then
+          removed = classSpells:RemoveCustomSpell(data.spellID) or removed
+        end
+      end
+
+      if data.type == "mount" and data.mountID then
+        local mounts = BarSmith:GetModule("Mounts")
+        if mounts and mounts.RemoveExtraMount then
+          removed = mounts:RemoveExtraMount(data.mountID) or removed
+        end
+      end
+
+      if data.type == "toy" and data.toyID then
+        local toys = BarSmith:GetModule("Toys")
+        if toys and toys.RemoveExtraToy then
+          removed = toys:RemoveExtraToy(data.toyID) or removed
+        end
+      end
+
+      if data.itemID then
+        local con = BarSmith:GetModule("Consumables")
+        if con and con.RemoveExtraItem then
+          removed = con:RemoveExtraItem(data.itemID, data.type) or removed
+        end
+      end
+
+      if removed then
+        BarSmith:Print("Removed from manual list.")
+      else
+        BarSmith:Print("Nothing to remove for that item.")
+      end
+    end
+
     BarSmith:RunAutoFill(true)
     return
   end
@@ -1179,37 +1236,42 @@ function BarFrame:HandleReceiveDrag(btn)
       end
     end
   elseif cursorType == "toy" then
-    BarSmith:RemoveFromExcludeForToyID(id)
+    local removed = BarSmith:RemoveFromExcludeForToyID(id)
     local toys = BarSmith:GetModule("Toys")
-    if toys and toys:AddExtraToy(id) then
+    local added = (toys and toys:AddExtraToy(id)) == true
+    if added or removed then
       BarSmith:RunAutoFill(true)
     end
   elseif cursorType == "item" then
     if isToyItem(id) then
-      BarSmith:RemoveFromExcludeForToyID(id)
+      local removed = BarSmith:RemoveFromExcludeForToyID(id)
       local toys = BarSmith:GetModule("Toys")
-      if toys and toys:AddExtraToy(id) then
+      local added = (toys and toys:AddExtraToy(id)) == true
+      if added or removed then
         BarSmith:RunAutoFill(true)
       end
     else
-      BarSmith:RemoveFromExcludeForItemID(id)
+      local removed = BarSmith:RemoveFromExcludeForItemID(id)
       local con = BarSmith:GetModule("Consumables")
-      if con and con:AddExtraItem(id) then
+      local added = (con and con:AddExtraItem(id)) == true
+      if added or removed then
         BarSmith:RunAutoFill(true)
       end
     end
   elseif cursorType == "mount" then
     local _, spellID = C_MountJournal.GetMountInfoByID(id)
-    BarSmith:RemoveFromExcludeForSpellID(spellID)
+    local removed = BarSmith:RemoveFromExcludeForSpellID(spellID)
     local mounts = BarSmith:GetModule("Mounts")
-    if mounts and mounts:AddExtraMount(id) then
+    local added = (mounts and mounts:AddExtraMount(id)) == true
+    if added or removed then
       BarSmith:RunAutoFill(true)
     end
   elseif cursorType == "spell" then
     local resolvedSpellID = spellID or id
-    BarSmith:RemoveFromExcludeForSpellID(resolvedSpellID)
+    local removed = BarSmith:RemoveFromExcludeForSpellID(resolvedSpellID)
     local classSpells = BarSmith:GetModule("ClassSpells")
-    if classSpells and classSpells:AddCustomSpell(resolvedSpellID) then
+    local added = (classSpells and classSpells:AddCustomSpell(resolvedSpellID)) == true
+    if added or removed then
       BarSmith:RunAutoFill(true)
     end
   end
@@ -1702,24 +1764,41 @@ function BarFrame:ShowButtonTooltip(btn, isFlyoutChild)
   else
     GameTooltip:AddLine(TOOLTIP_ICON .. " |cff33ccff[BarSmith]|r", 0.5, 0.5, 0.5)
   end
-  if btn.flyoutItems and #btn.flyoutItems > 1 then
-    GameTooltip:AddLine("Shift-Right-click to Open Menu", 0.8, 0.8, 0.8)
-    GameTooltip:AddLine("Ctrl-Left-click a flyout item to pin/unpin", 0.8, 0.8, 0.8)
+  GameTooltip:AddLine(" ")
+  GameTooltip:AddLine(TOOLTIP_TITLE_COLOR .. "Actions|r", 1, 1, 1)
+  if not isFlyoutChild then
+    GameTooltip:AddLine(TOOLTIP_ACTION_MENU_COLOR .. "Open Menu|r: " ..
+      TOOLTIP_SHORTCUT_COLOR .. "Shift + Right Click|r", 0.8, 0.8, 0.8)
     -- local groupLabel = (btn.groupData and btn.groupData.name) or (#btn.flyoutItems .. " items")
     -- GameTooltip:AddLine(groupLabel, 0.8, 0.8, 0.8)
   end
   if isFlyoutChild then
-    GameTooltip:AddLine("Ctrl-Left-click to pin/unpin", 0.8, 0.8, 0.8)
+    GameTooltip:AddLine(TOOLTIP_ACTION_ADD_COLOR .. "Add to QuickBar|r: " ..
+      TOOLTIP_SHORTCUT_COLOR .. "Alt + Left Click|r", 0.8, 0.8, 0.8)
+    GameTooltip:AddLine(TOOLTIP_ACTION_PIN_COLOR .. "Pin / Unpin|r: " ..
+      TOOLTIP_SHORTCUT_COLOR .. "Ctrl + Left Click|r", 0.8, 0.8, 0.8)
   end
   if data.isPlaceholder then
     GameTooltip:AddLine("No items available in this category.", 0.8, 0.8, 0.8)
   else
-    GameTooltip:AddLine("Alt-Right-click to add to QuickBar", 0.8, 0.8, 0.8)
-    GameTooltip:AddLine("Alt-Left-click to Exclude", 0.8, 0.8, 0.8)
+    if isFlyoutChild then
+      local isAuto = data.autoAdded
+      if isAuto == nil then
+        isAuto = BarSmith:IsAutoAdded(data)
+      end
+      if isAuto then
+        GameTooltip:AddLine(TOOLTIP_ACTION_REMOVE_COLOR .. "Exclude|r: " ..
+          TOOLTIP_SHORTCUT_COLOR .. "Ctrl + Shift + Right Click|r", 0.8, 0.8, 0.8)
+      else
+        GameTooltip:AddLine(TOOLTIP_ACTION_REMOVE_COLOR .. "Remove|r: " ..
+          TOOLTIP_SHORTCUT_COLOR .. "Ctrl + Shift + Right Click|r", 0.8, 0.8, 0.8)
+      end
+    end
     if data.type == "macro" then
       GameTooltip:AddLine("Drag a macro to assign it to this slot", 0.8, 0.8, 0.8)
     else
-      GameTooltip:AddLine("Drag a Consumable, Toy, Mount, or Spell to include (clears from exclude)", 0.8, 0.8, 0.8)
+      GameTooltip:AddLine(TOOLTIP_NOTE_COLOR ..
+        "Note: Drag a consumable, toy, mount, or spell to include|r", 0.8, 0.8, 0.8)
     end
   end
   GameTooltip:Show()

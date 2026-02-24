@@ -72,6 +72,37 @@ function Consumables:AddExtraItem(itemID)
   return true
 end
 
+function Consumables:RemoveExtraItem(itemID, subtype)
+  if not itemID then return false end
+
+  local category
+  if subtype == "potion" then
+    category = "potions"
+  elseif subtype == "flask" then
+    category = "flasks"
+  elseif subtype == "food" then
+    category = "food"
+  elseif subtype == "bandage" then
+    category = "bandages"
+  elseif subtype == "utility" then
+    category = "utilities"
+  else
+    category = self:ClassifyExtraCategory(itemID)
+  end
+
+  if not category then
+    return false
+  end
+
+  local include = GetIncludeLists()
+  if include[category] and include[category][itemID] then
+    include[category][itemID] = nil
+    return true
+  end
+
+  return false
+end
+
 function Consumables:ApplyIncludes(bagResults)
   local include = GetIncludeLists()
   if not include or not bagResults or not bagResults.byItemID then
@@ -138,9 +169,6 @@ function Consumables:GetItems()
   -- Utility (drums, runes)
   self:Collect(items, bagResults.utilities, prefs, splitFlags, "utilities", "utility")
 
-  -- Deduplicate
-  items = self:Deduplicate(items)
-
   -- Sort by quality descending
   scanner:SortByQuality(items)
 
@@ -186,7 +214,6 @@ function Consumables:GetItemsForCategory(subtype)
     end
   end
 
-  items = self:Deduplicate(items)
   scanner:SortByQuality(items)
   return items
 end
@@ -211,27 +238,10 @@ function Consumables:AddUsable(items, scannedList, subtype, currentExpansionOnly
   for _, entry in ipairs(scannedList) do
     if currentExpansionOnly and not IsCurrentExpansionItem(entry) then
       -- skip non-current expansion items
-    elseif scanner:IsUsableItem(entry.itemID) then
+    elseif scanner:IsUsableItem(entry.itemID, entry.bag, entry.slot) then
       entry.type = subtype
       table.insert(items, entry)
     end
   end
 end
 
-------------------------------------------------------------------------
--- Deduplicate by itemID, keeping highest count
-------------------------------------------------------------------------
-
-function Consumables:Deduplicate(items)
-  local seen = {}
-  local unique = {}
-
-  for _, item in ipairs(items) do
-    if not seen[item.itemID] then
-      seen[item.itemID] = true
-      table.insert(unique, item)
-    end
-  end
-
-  return unique
-end

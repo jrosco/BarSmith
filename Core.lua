@@ -129,6 +129,16 @@ function BarSmith:Debug(msg)
   end
 end
 
+function BarSmith:ReportError(msg)
+  local text = "BarSmith Error: " .. tostring(msg)
+  local handler = geterrorhandler and geterrorhandler()
+  if handler then
+    handler(text)
+  else
+    self:Print(text)
+  end
+end
+
 ------------------------------------------------------------------------
 -- Module System
 ------------------------------------------------------------------------
@@ -167,7 +177,7 @@ function BarSmith:FireCallback(event, ...)
   for _, entry in ipairs(listeners) do
     local ok, err = pcall(entry.func, entry.owner, ...)
     if not ok then
-      self:Debug("Callback error [" .. event .. "]: " .. tostring(err))
+      self:ReportError("Callback error [" .. event .. "]: " .. tostring(err))
     end
   end
 end
@@ -298,6 +308,90 @@ function BarSmith:GetActionIdentityKey(data)
   end
 
   return nil
+end
+
+function BarSmith:IsConsumableIncluded(itemID)
+  local include = self.chardb and self.chardb.consumables and self.chardb.consumables.include
+  if not include or not itemID then
+    return false
+  end
+
+  for _, list in pairs(include) do
+    if type(list) == "table" and list[itemID] then
+      return true
+    end
+  end
+
+  return false
+end
+
+function BarSmith:IsCustomSpellID(spellID)
+  local list = self.chardb and self.chardb.classSpells and self.chardb.classSpells.customSpellIDs
+  if not list or not spellID then
+    return false
+  end
+
+  for _, id in ipairs(list) do
+    if id == spellID then
+      return true
+    end
+  end
+
+  return false
+end
+
+function BarSmith:IsIncludedMount(mountID)
+  local include = self.chardb and self.chardb.mounts and self.chardb.mounts.include
+  if not include or not mountID then
+    return false
+  end
+  return include[mountID] == true
+end
+
+function BarSmith:IsManualItem(data)
+  if not data then return false end
+
+  if data.type == "macro" or data.macroID or data.slotIndex then
+    return true
+  end
+
+  if data.type == "class_spell" and data.spellID and self:IsCustomSpellID(data.spellID) then
+    return true
+  end
+
+  if data.type == "mount" and data.mountID and self:IsIncludedMount(data.mountID) then
+    return true
+  end
+
+  if data.itemID and self:IsConsumableIncluded(data.itemID) then
+    return true
+  end
+
+  return false
+end
+
+function BarSmith:SetAutoAddedKeys(keys)
+  if not self.chardb then return end
+
+  self.chardb.autoAdded = {}
+  if not keys then
+    return
+  end
+
+  for key, enabled in pairs(keys) do
+    if enabled then
+      self.chardb.autoAdded[key] = true
+    end
+  end
+end
+
+function BarSmith:IsAutoAdded(data)
+  if not self.chardb or not self.chardb.autoAdded then
+    return false
+  end
+  local key = self:GetActionIdentityKey(data)
+  if not key then return false end
+  return self.chardb.autoAdded[key] == true
 end
 
 function BarSmith:IsExcluded(data)
