@@ -338,6 +338,11 @@ function BarSmith:RemoveFromExcludeForSpellID(spellID)
   return self:RemoveFromExcludeByKey("spell:" .. tostring(spellID))
 end
 
+function BarSmith:RemoveFromExcludeForToyID(toyID)
+  if not toyID then return false end
+  return self:RemoveFromExcludeByKey("toy:" .. tostring(toyID))
+end
+
 -- Backward-compatible wrappers
 
 function BarSmith:ClearInclude()
@@ -355,6 +360,10 @@ function BarSmith:ClearInclude()
 
   if self.chardb.mounts then
     self.chardb.mounts.include = {}
+  end
+
+  if self.chardb.toys then
+    self.chardb.toys.include = {}
   end
 
   if self.chardb.classSpells then
