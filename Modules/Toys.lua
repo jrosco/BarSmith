@@ -6,46 +6,16 @@
 local Toys = BarSmith:NewModule("Toys")
 Toys.DEFAULT_ICON = "Interface\\Icons\\INV_Misc_Toy_02"
 
-local function GetToyInfoCompat(toyID)
+local function GetToyInfo(toyID)
   if not C_ToyBox or not C_ToyBox.GetToyInfo then
     return nil, nil, nil
   end
 
-  local name, icon, isFavorite = C_ToyBox.GetToyInfo(toyID)
-  if type(name) == "table" then
-    return name.name, name.icon, name.isFavorite
-  end
-
-  return name, icon, isFavorite
-end
-
-local function GetToyNameAndIcon(toyID)
-  local name, icon = GetToyInfoCompat(toyID)
+  local _, toyName, icon, isFavorite = C_ToyBox.GetToyInfo(toyID)
   if icon == 0 then
     icon = nil
   end
-
-  if not icon and C_Item and C_Item.GetItemIconByID then
-    icon = C_Item.GetItemIconByID(toyID)
-    if icon == 0 then
-      icon = nil
-    end
-  end
-
-  if (not name or not icon) and C_Item and C_Item.GetItemInfo then
-    local itemName, _, _, _, _, _, _, _, _, itemIcon = C_Item.GetItemInfo(toyID)
-    name = name or itemName
-    if itemIcon == 0 then
-      itemIcon = nil
-    end
-    icon = icon or itemIcon
-  end
-
-  if (not name or not icon) and C_Item and C_Item.RequestLoadItemDataByID then
-    C_Item.RequestLoadItemDataByID(toyID)
-  end
-
-  return name, icon
+  return toyName, icon, isFavorite
 end
 
 local function IsToyUsable(toyID)
@@ -69,7 +39,7 @@ local function GetFavoriteToyIDs()
     for i = 1, count do
       local toyID = C_ToyBox.GetToyFromIndex(i)
       if toyID then
-        local _, _, isFavorite = GetToyInfoCompat(toyID)
+        local _, _, isFavorite = GetToyInfo(toyID)
         if isFavorite then
           table.insert(favorites, toyID)
         end
@@ -143,7 +113,7 @@ function Toys:GetItems()
       return
     end
 
-    local name, icon = GetToyNameAndIcon(toyID)
+    local name, icon = GetToyInfo(toyID)
 
     table.insert(items, {
       toyID = toyID,

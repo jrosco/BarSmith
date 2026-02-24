@@ -29,6 +29,7 @@ local PIN_ICON_MIN_INSET = 0
 local PIN_ICON_OFFSET_X = -2
 local PIN_ICON_OFFSET_Y = 2
 local PIN_ICON_ALPHA = 0.8
+local DEFAULT_TOY_ICON = "Interface\\Icons\\INV_Misc_Toy_02"
 local OVERLAY_ICON_SCALE = 0.5
 local OVERLAY_ICON_MIN_SIZE = 10
 local OVERLAY_ICON_MAX_SIZE = 0 -- 0 disables max clamp
@@ -779,12 +780,28 @@ function BarFrame:ApplyButtonVisuals(btn, data)
     return
   end
 
-  if data.iconAtlas and btn.icon.SetAtlas then
-    btn.icon:SetAtlas(data.iconAtlas, true)
+  local icon = data.icon
+  if icon == 0 or icon == "" or icon == false then
+    icon = nil
+  end
+  if not icon and data.toyID then
+    icon = DEFAULT_TOY_ICON
+  end
+
+  local iconAtlas = data.iconAtlas
+  if not iconAtlas and type(icon) == "string" and C_Texture and C_Texture.GetAtlasInfo then
+    if C_Texture.GetAtlasInfo(icon) then
+      iconAtlas = icon
+      icon = nil
+    end
+  end
+
+  if iconAtlas and btn.icon.SetAtlas then
+    btn.icon:SetAtlas(iconAtlas, true)
     btn.icon:SetDesaturated(false)
     btn.icon:SetVertexColor(1, 1, 1)
-  elseif data.icon then
-    btn.icon:SetTexture(data.icon)
+  elseif icon then
+    btn.icon:SetTexture(icon)
     btn.icon:SetDesaturated(false)
     btn.icon:SetVertexColor(1, 1, 1)
   else

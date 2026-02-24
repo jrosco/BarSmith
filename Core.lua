@@ -238,13 +238,21 @@ function BarSmith:GetExpandedPriority()
   end
 
   local expanded = {}
+  local seen = {}
+  local function addEntry(name)
+    if not name or seen[name] then
+      return
+    end
+    seen[name] = true
+    table.insert(expanded, name)
+  end
   local modules = self.chardb and self.chardb.modules or {}
   local con = self.chardb and self.chardb.consumables or {}
   local split = con.split or {}
 
   for _, modName in ipairs(priority) do
     if modName ~= "consumables" then
-      table.insert(expanded, modName)
+      addEntry(modName)
     else
       if modules.consumables == false then
         -- skip all consumables and split entries when disabled
@@ -253,7 +261,7 @@ function BarSmith:GetExpandedPriority()
 
         local function addSplit(flagKey, suffix, includeFlag)
           if split[flagKey] then
-            table.insert(expanded, "consumables_" .. suffix)
+            addEntry("consumables_" .. suffix)
             return
           end
           if includeFlag then
@@ -268,7 +276,7 @@ function BarSmith:GetExpandedPriority()
         addSplit("utilities", "utility", con.utilities)
 
         if anyParent then
-          table.insert(expanded, "consumables")
+          addEntry("consumables")
         end
       end
     end
