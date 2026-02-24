@@ -699,62 +699,56 @@ function BarFrame:SetButtonAction(btn, data, clickButton, allowRightClick)
 
   -- clickButton: nil/"" = any click, "1" = left only, "2" = right only
   local attrPrefix = clickButton or ""
+  local allowRight = allowRightClick == true
 
-  if data.macrotext then
-    btn:SetAttribute("type" .. attrPrefix, "macro")
-    btn:SetAttribute("macrotext" .. attrPrefix, data.macrotext)
-    if not allowRightClick then
-      -- Disable right-click actions; reserved for menu/exclude/remove.
-      btn:SetAttribute("type2", "macro")
-      btn:SetAttribute("macrotext2", "/stopmacro")
+  local function setAction(prefix)
+    if data.macrotext then
+      btn:SetAttribute("type" .. prefix, "macro")
+      btn:SetAttribute("macrotext" .. prefix, data.macrotext)
+      return true
     end
-    -- Reserve modified clicks for menu/exclude without triggering the macro.
-    btn:SetAttribute("alt-type", "macro")
-    btn:SetAttribute("alt-macrotext", "/stopmacro")
-    btn:SetAttribute("alt-type1", "macro")
-    btn:SetAttribute("alt-macrotext1", "/stopmacro")
-    btn:SetAttribute("alt-type2", "macro")
-    btn:SetAttribute("alt-macrotext2", "/stopmacro")
-    btn:SetAttribute("shift-type2", "macro")
-    btn:SetAttribute("shift-macrotext2", "/stopmacro")
-    btn:SetAttribute("ctrl-type", "macro")
-    btn:SetAttribute("ctrl-macrotext", "/stopmacro")
-    btn:SetAttribute("ctrl-type1", "macro")
-    btn:SetAttribute("ctrl-macrotext1", "/stopmacro")
-    btn:SetAttribute("ctrl-type2", "macro")
-    btn:SetAttribute("ctrl-macrotext2", "/stopmacro")
-    return
+
+    if data.type == "hearthstone_toy" and data.toyID then
+      btn:SetAttribute("type" .. prefix, "toy")
+      btn:SetAttribute("toy" .. prefix, data.toyID)
+      return true
+    elseif data.type == "trinket" and data.slotID then
+      local itemRef = data.name or (data.itemID and ("item:" .. data.itemID))
+      if itemRef then
+        btn:SetAttribute("type" .. prefix, "item")
+        btn:SetAttribute("item" .. prefix, itemRef)
+        return true
+      end
+    elseif data.type == "mount" or data.type == "class_spell" or data.type == "profession" then
+      btn:SetAttribute("type" .. prefix, "spell")
+      btn:SetAttribute("spell" .. prefix, data.name or data.spellID)
+      return true
+    elseif data.type == "quest_item" or data.type == "hearthstone_item"
+        or data.type == "engineer_teleport"
+        or data.type == "potion"
+        or data.type == "flask" or data.type == "food"
+        or data.type == "bandage" or data.type == "utility" then
+      local itemRef = data.name or (data.itemID and ("item:" .. data.itemID))
+      if itemRef then
+        btn:SetAttribute("type" .. prefix, "item")
+        btn:SetAttribute("item" .. prefix, itemRef)
+        return true
+      end
+    end
+    return false
   end
 
-  if data.type == "hearthstone_toy" and data.toyID then
-    btn:SetAttribute("type" .. attrPrefix, "toy")
-    btn:SetAttribute("toy" .. attrPrefix, data.toyID)
-  elseif data.type == "trinket" and data.slotID then
-    local itemRef = data.name or (data.itemID and ("item:" .. data.itemID))
-    if itemRef then
-      btn:SetAttribute("type" .. attrPrefix, "item")
-      btn:SetAttribute("item" .. attrPrefix, itemRef)
-    end
-  elseif data.type == "mount" or data.type == "class_spell" or data.type == "profession" then
-    btn:SetAttribute("type" .. attrPrefix, "spell")
-    btn:SetAttribute("spell" .. attrPrefix, data.name or data.spellID)
-  elseif data.type == "quest_item" or data.type == "hearthstone_item"
-      or data.type == "engineer_teleport"
-      or data.type == "potion"
-      or data.type == "flask" or data.type == "food"
-      or data.type == "bandage" or data.type == "utility" then
-    local itemRef = data.name or (data.itemID and ("item:" .. data.itemID))
-    if itemRef then
-      btn:SetAttribute("type" .. attrPrefix, "item")
-      btn:SetAttribute("item" .. attrPrefix, itemRef)
-    end
-  end
+  setAction(attrPrefix)
 
-  -- Reserve modified clicks for menu/exclude without triggering the action.
-  if not allowRightClick then
+  -- Reserve or mirror right-click behavior.
+  if allowRight and attrPrefix == "" then
+    setAction("2")
+  elseif not allowRight and attrPrefix ~= "2" then
     btn:SetAttribute("type2", "macro")
     btn:SetAttribute("macrotext2", "/stopmacro")
   end
+
+  -- Reserve modified clicks for menu/exclude without triggering the action.
   btn:SetAttribute("alt-type", "macro")
   btn:SetAttribute("alt-macrotext", "/stopmacro")
   btn:SetAttribute("alt-type1", "macro")
@@ -1017,7 +1011,7 @@ function BarFrame:SetFlyoutItems(btn, children)
     end
 
     if childData then
-      self:SetButtonAction(childBtn, childData, nil)
+      self:SetButtonAction(childBtn, childData, nil, true)
       self:ApplyButtonVisuals(childBtn, childData)
       childBtn.itemData = childData
       if childBtn.hotkey then
@@ -1286,7 +1280,7 @@ function BarFrame:PromoteChildAsPrimary(parentBtn, childData)
   parentBtn.groupData.toyID = childData.toyID
 
   parentBtn.itemData = childData
-  self:SetButtonAction(parentBtn, childData, "2")
+  self:SetButtonAction(parentBtn, childData, nil, true)
   self:ApplyButtonVisuals(parentBtn, childData)
 end
 
@@ -1366,11 +1360,11 @@ function BarFrame:SetButton(index, itemData)
     actionData = itemData.primary
     btn.groupData = itemData
     self:SetFlyoutItems(btn, itemData.children or {})
-    self:SetButtonAction(btn, actionData, nil)
+    self:SetButtonAction(btn, actionData, nil, true)
   else
     btn.groupData = nil
     self:SetFlyoutItems(btn, nil)
-    self:SetButtonAction(btn, actionData, nil)
+    self:SetButtonAction(btn, actionData, nil, true)
   end
 
   btn.itemData = actionData
