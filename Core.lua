@@ -348,6 +348,14 @@ function BarSmith:IsIncludedMount(mountID)
   return include[mountID] == true
 end
 
+function BarSmith:IsIncludedToy(toyID)
+  local include = self.chardb and self.chardb.toys and self.chardb.toys.include
+  if not include or not toyID then
+    return false
+  end
+  return include[toyID] == true
+end
+
 function BarSmith:IsManualItem(data)
   if not data then return false end
 
@@ -360,6 +368,10 @@ function BarSmith:IsManualItem(data)
   end
 
   if data.type == "mount" and data.mountID and self:IsIncludedMount(data.mountID) then
+    return true
+  end
+
+  if data.type == "toy" and data.toyID and self:IsIncludedToy(data.toyID) then
     return true
   end
 

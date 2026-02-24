@@ -100,6 +100,19 @@ function Toys:AddExtraToy(toyID)
   return true
 end
 
+function Toys:RemoveExtraToy(toyID)
+  if not toyID then return false end
+  if not BarSmith.chardb or not BarSmith.chardb.toys then
+    return false
+  end
+  local include = BarSmith.chardb.toys.include
+  if include and include[toyID] then
+    include[toyID] = nil
+    return true
+  end
+  return false
+end
+
 ------------------------------------------------------------------------
 -- Gather toy entries for the action bar
 ------------------------------------------------------------------------
