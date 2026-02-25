@@ -116,6 +116,57 @@ local FLYOUT_SECURE_HIDE_CHILD = [[
   end
 ]]
 
+local function NormalizeTooltipModifier(mod)
+  mod = string.upper(tostring(mod or "NONE"))
+  if mod ~= "ALT" and mod ~= "SHIFT" and mod ~= "CTRL" and mod ~= "NONE" then
+    mod = "NONE"
+  end
+  return mod
+end
+
+function BarFrame:IsTooltipModifierActive()
+  local mod = NormalizeTooltipModifier(BarSmith.chardb and BarSmith.chardb.tooltipModifier)
+  if mod == "ALT" then
+    return IsAltKeyDown()
+  elseif mod == "SHIFT" then
+    return IsShiftKeyDown()
+  elseif mod == "CTRL" then
+    return IsControlKeyDown()
+  end
+  return true
+end
+
+function BarFrame:UpdateTooltipState(btn, isFlyoutChild)
+  if not btn then return end
+  local allowed = self:IsTooltipModifierActive()
+  if allowed then
+    if not btn.__bsTooltipShown then
+      self:ShowButtonTooltip(btn, isFlyoutChild)
+      btn.__bsTooltipShown = true
+    end
+  elseif btn.__bsTooltipShown then
+    GameTooltip:Hide()
+    btn.__bsTooltipShown = false
+  end
+end
+
+function BarFrame:HandleTooltipEnter(btn, isFlyoutChild)
+  if not btn then return end
+  btn.__bsTooltipShown = false
+  self:UpdateTooltipState(btn, isFlyoutChild)
+  btn:SetScript("OnUpdate", function(b)
+    self:UpdateTooltipState(b, isFlyoutChild)
+  end)
+end
+
+function BarFrame:HandleTooltipLeave(btn)
+  if btn then
+    btn.__bsTooltipShown = false
+    btn:SetScript("OnUpdate", nil)
+  end
+  GameTooltip:Hide()
+end
+
 local function IsSettingsClick(button)
   return button == "RightButton" and IsShiftKeyDown() and not IsControlKeyDown() and not IsAltKeyDown()
 end
@@ -521,11 +572,11 @@ function BarFrame:CreateButton(index)
     if b.flyoutItems and #b.flyoutItems > 1 and not b.flyoutOpen then
       self:ShowFlyout(b)
     end
-    self:ShowButtonTooltip(b)
+    self:HandleTooltipEnter(b, false)
   end)
   btn:SetScript("OnLeave", function(b)
     self:NotifyMouseLeave()
-    GameTooltip:Hide()
+    self:HandleTooltipLeave(b)
     if b.flyoutOpen then
       self:StartAutoCloseTimer()
     end
@@ -607,11 +658,11 @@ function BarFrame:CreateFlyoutButtons(parentBtn)
     child:SetScript("OnEnter", function(b)
       self:NotifyMouseEnter()
       self:CancelAutoCloseTimer()
-      self:ShowButtonTooltip(b, true)
+      self:HandleTooltipEnter(b, true)
     end)
-    child:SetScript("OnLeave", function()
+    child:SetScript("OnLeave", function(b)
       self:NotifyMouseLeave()
-      GameTooltip:Hide()
+      self:HandleTooltipLeave(b)
       self:StartAutoCloseTimer()
     end)
     child:SetScript("OnReceiveDrag", function(b)
