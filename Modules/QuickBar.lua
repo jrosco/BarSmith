@@ -187,7 +187,105 @@ function QuickBar:Init()
     self:StartHideTimer()
   end)
 
+  -- Cooldown update ticker
+  self.cooldownTicker = C_Timer.NewTicker(0.5, function()
+    self:UpdateCooldowns()
+  end)
+
   self:Refresh()
+end
+
+function QuickBar:UpdateCooldowns()
+  if not self.frame or self.previewMode then
+    return
+  end
+
+  local barFrame = BarSmith:GetModule("BarFrame")
+  local hearthstones = BarSmith:GetModule("Hearthstones")
+  local housingReturnActive = hearthstones and hearthstones.housingReturnActive == true
+  local housingIcon = hearthstones and hearthstones.HOUSING_ICON or nil
+  local housingReturnAtlas = hearthstones and hearthstones.HOUSING_ICON_RETURN_ATLAS or nil
+
+  local function updateButtonCooldown(btn)
+    if not btn or not btn:IsShown() or not btn.itemData then
+      return
+    end
+
+    local data = btn.itemData
+    local durationObject
+    local start, duration, enable = 0, 0, 1
+
+    if data.type == "housing_teleport" then
+      if hearthstones then
+        local changed = false
+        if housingReturnActive then
+          if data.iconAtlas ~= housingReturnAtlas then
+            data.iconAtlas = housingReturnAtlas
+            changed = true
+          end
+          if data.icon ~= nil then
+            data.icon = nil
+            changed = true
+          end
+          if data.hideCooldown ~= true then
+            data.hideCooldown = true
+            changed = true
+          end
+        else
+          if data.iconAtlas ~= nil then
+            data.iconAtlas = nil
+            changed = true
+          end
+          if housingIcon and data.icon ~= housingIcon then
+            data.icon = housingIcon
+            changed = true
+          end
+          if data.hideCooldown ~= false and data.hideCooldown ~= nil then
+            data.hideCooldown = nil
+            changed = true
+          end
+        end
+        if changed and barFrame and barFrame.ApplyButtonVisuals then
+          barFrame:ApplyButtonVisuals(btn, data)
+        end
+      end
+
+      if data.hideCooldown then
+        if btn.cooldown then
+          btn.cooldown:Clear()
+        end
+        return
+      end
+      if C_Housing and C_Housing.GetVisitCooldownInfo then
+        local info = C_Housing.GetVisitCooldownInfo()
+        if info and info.isEnabled then
+          start = info.startTime or 0
+          duration = info.duration or 0
+          enable = 1
+        else
+          start, duration, enable = 0, 0, 0
+        end
+      end
+    elseif data.spellID then
+      durationObject = C_Spell.GetSpellCooldownDuration(data.spellID)
+    elseif data.itemID then
+      start, duration, enable = C_Item.GetItemCooldown(data.itemID)
+    elseif data.toyID then
+      start, duration, enable = C_Item.GetItemCooldown(data.toyID)
+    end
+
+    if btn.cooldown and durationObject then
+      btn.cooldown:SetCooldownFromDurationObject(durationObject)
+    elseif btn.cooldown and duration and duration > 0 then
+      CooldownFrame_Set(btn.cooldown, start, duration, enable)
+    elseif btn.cooldown then
+      btn.cooldown:Clear()
+    end
+  end
+
+  for _, btn in ipairs(self.buttons or {}) do
+    updateButtonCooldown(btn)
+  end
 end
 
 function QuickBar:UpdateBackdropVisibility()
@@ -548,6 +646,7 @@ function QuickBar:Refresh()
   if not inCombat then
     self:UpdateLayout()
     self:UpdateToggleState()
+    self:UpdateCooldowns()
   end
 end
 
