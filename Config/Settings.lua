@@ -110,6 +110,7 @@ function mod:Init()
     classSpells  = "Class Special Spells",
     professions  = "Professions",
     mounts       = "Mounts",
+    toys         = "Toys",
     hearthstones = "Hearthstones",
     macros       = "Macros",
   }

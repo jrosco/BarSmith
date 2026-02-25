@@ -29,6 +29,7 @@ local PIN_ICON_MIN_INSET = 0
 local PIN_ICON_OFFSET_X = -2
 local PIN_ICON_OFFSET_Y = 2
 local PIN_ICON_ALPHA = 0.8
+local DEFAULT_TOY_ICON = "Interface\\Icons\\INV_Misc_Toy_02"
 local OVERLAY_ICON_SCALE = 0.5
 local OVERLAY_ICON_MIN_SIZE = 10
 local OVERLAY_ICON_MAX_SIZE = 0 -- 0 disables max clamp
@@ -322,6 +323,7 @@ function BarFrame:EnsureModuleButtons()
     "classSpells",
     "professions",
     "mounts",
+    "toys",
     "hearthstones",
     "macros",
   }
@@ -707,35 +709,30 @@ function BarFrame:SetButtonAction(btn, data, clickButton, allowRightClick)
       btn:SetAttribute("macrotext" .. prefix, data.macrotext)
       return true
     end
+  end
 
-    if data.type == "hearthstone_toy" and data.toyID then
-      btn:SetAttribute("type" .. prefix, "toy")
-      btn:SetAttribute("toy" .. prefix, data.toyID)
-      return true
-    elseif data.type == "trinket" and data.slotID then
-      local itemRef = data.name or (data.itemID and ("item:" .. data.itemID))
-      if itemRef then
-        btn:SetAttribute("type" .. prefix, "item")
-        btn:SetAttribute("item" .. prefix, itemRef)
-        return true
-      end
-    elseif data.type == "mount" or data.type == "class_spell" or data.type == "profession" then
-      btn:SetAttribute("type" .. prefix, "spell")
-      btn:SetAttribute("spell" .. prefix, data.name or data.spellID)
-      return true
-    elseif data.type == "quest_item" or data.type == "hearthstone_item"
-        or data.type == "engineer_teleport"
-        or data.type == "potion"
-        or data.type == "flask" or data.type == "food"
-        or data.type == "bandage" or data.type == "utility" then
-      local itemRef = data.name or (data.itemID and ("item:" .. data.itemID))
-      if itemRef then
-        btn:SetAttribute("type" .. prefix, "item")
-        btn:SetAttribute("item" .. prefix, itemRef)
-        return true
-      end
+  if (data.type == "hearthstone_toy" or data.type == "toy") and data.toyID then
+    btn:SetAttribute("type" .. attrPrefix, "toy")
+    btn:SetAttribute("toy" .. attrPrefix, data.toyID)
+  elseif data.type == "trinket" and data.slotID then
+    local itemRef = data.name or (data.itemID and ("item:" .. data.itemID))
+    if itemRef then
+      btn:SetAttribute("type" .. attrPrefix, "item")
+      btn:SetAttribute("item" .. attrPrefix, itemRef)
     end
-    return false
+  elseif data.type == "mount" or data.type == "class_spell" or data.type == "profession" then
+    btn:SetAttribute("type" .. attrPrefix, "spell")
+    btn:SetAttribute("spell" .. attrPrefix, data.name or data.spellID)
+  elseif data.type == "quest_item" or data.type == "hearthstone_item"
+      or data.type == "engineer_teleport"
+      or data.type == "potion"
+      or data.type == "flask" or data.type == "food"
+      or data.type == "bandage" or data.type == "utility" then
+    local itemRef = data.name or (data.itemID and ("item:" .. data.itemID))
+    if itemRef then
+      btn:SetAttribute("type" .. attrPrefix, "item")
+      btn:SetAttribute("item" .. attrPrefix, itemRef)
+    end
   end
 
   setAction(attrPrefix)
@@ -783,12 +780,28 @@ function BarFrame:ApplyButtonVisuals(btn, data)
     return
   end
 
-  if data.iconAtlas and btn.icon.SetAtlas then
-    btn.icon:SetAtlas(data.iconAtlas, true)
+  local icon = data.icon
+  if icon == 0 or icon == "" or icon == false then
+    icon = nil
+  end
+  if not icon and data.toyID then
+    icon = DEFAULT_TOY_ICON
+  end
+
+  local iconAtlas = data.iconAtlas
+  if not iconAtlas and type(icon) == "string" and C_Texture and C_Texture.GetAtlasInfo then
+    if C_Texture.GetAtlasInfo(icon) then
+      iconAtlas = icon
+      icon = nil
+    end
+  end
+
+  if iconAtlas and btn.icon.SetAtlas then
+    btn.icon:SetAtlas(iconAtlas, true)
     btn.icon:SetDesaturated(false)
     btn.icon:SetVertexColor(1, 1, 1)
-  elseif data.icon then
-    btn.icon:SetTexture(data.icon)
+  elseif icon then
+    btn.icon:SetTexture(icon)
     btn.icon:SetDesaturated(false)
     btn.icon:SetVertexColor(1, 1, 1)
   else
@@ -1141,6 +1154,13 @@ function BarFrame:HandleButtonPostClick(btn, button)
         end
       end
 
+      if data.type == "toy" and data.toyID then
+        local toys = BarSmith:GetModule("Toys")
+        if toys and toys.RemoveExtraToy then
+          removed = toys:RemoveExtraToy(data.toyID) or removed
+        end
+      end
+
       if data.itemID then
         local con = BarSmith:GetModule("Consumables")
         if con and con.RemoveExtraItem then
@@ -1166,7 +1186,7 @@ function BarFrame:HandleButtonPostClick(btn, button)
 end
 
 ------------------------------------------------------------------------
--- Drag & drop support for consumable includes
+-- Drag & drop support for includes
 ------------------------------------------------------------------------
 
 function BarFrame:HandleReceiveDrag(btn)
@@ -1180,6 +1200,17 @@ function BarFrame:HandleReceiveDrag(btn)
   if not cursorType or not id then
     ClearCursor()
     return
+  end
+
+  local function isToyItem(itemID)
+    if not itemID then return false end
+    if C_ToyBox and C_ToyBox.IsToyItem and C_ToyBox.IsToyItem(itemID) then
+      return true
+    end
+    if PlayerHasToy and PlayerHasToy(itemID) then
+      return true
+    end
+    return false
   end
 
   if cursorType == "macro" then
@@ -1210,12 +1241,28 @@ function BarFrame:HandleReceiveDrag(btn)
         end
       end
     end
-  elseif cursorType == "item" then
-    local removed = BarSmith:RemoveFromExcludeForItemID(id)
-    local con = BarSmith:GetModule("Consumables")
-    local added = (con and con:AddExtraItem(id)) == true
+  elseif cursorType == "toy" then
+    local removed = BarSmith:RemoveFromExcludeForToyID(id)
+    local toys = BarSmith:GetModule("Toys")
+    local added = (toys and toys:AddExtraToy(id)) == true
     if added or removed then
       BarSmith:RunAutoFill(true)
+    end
+  elseif cursorType == "item" then
+    if isToyItem(id) then
+      local removed = BarSmith:RemoveFromExcludeForToyID(id)
+      local toys = BarSmith:GetModule("Toys")
+      local added = (toys and toys:AddExtraToy(id)) == true
+      if added or removed then
+        BarSmith:RunAutoFill(true)
+      end
+    else
+      local removed = BarSmith:RemoveFromExcludeForItemID(id)
+      local con = BarSmith:GetModule("Consumables")
+      local added = (con and con:AddExtraItem(id)) == true
+      if added or removed then
+        BarSmith:RunAutoFill(true)
+      end
     end
   elseif cursorType == "mount" then
     local _, spellID = C_MountJournal.GetMountInfoByID(id)
@@ -1681,6 +1728,7 @@ function BarFrame:ShowButtonTooltip(btn, isFlyoutChild)
     trinket = { label = "Trinket", color = { 1.0, 0.85, 0.2 } },
     class_spell = { label = "Class Spell", color = { 0.5, 0.9, 1.0 } },
     mount = { label = "Mount", color = { 0.6, 0.9, 0.6 } },
+    toy = { label = "Toy", color = { 0.9, 0.75, 0.25 } },
     hearthstone_item = { label = "Hearthstone", color = { 0.9, 0.6, 0.2 } },
     hearthstone_toy = { label = "Hearthstone (Toy)", color = { 0.9, 0.6, 0.2 } },
     engineer_teleport = { label = "Engineer Teleport", color = { 0.6, 0.9, 0.9 } },
@@ -1756,7 +1804,7 @@ function BarFrame:ShowButtonTooltip(btn, isFlyoutChild)
       GameTooltip:AddLine("Drag a macro to assign it to this slot", 0.8, 0.8, 0.8)
     else
       GameTooltip:AddLine(TOOLTIP_NOTE_COLOR ..
-        "Note: Drag a consumable, mount, or spell to include|r", 0.8, 0.8, 0.8)
+        "Note: Drag a consumable, toy, mount, or spell to include|r", 0.8, 0.8, 0.8)
     end
   end
   GameTooltip:Show()
