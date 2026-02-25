@@ -171,7 +171,7 @@ function BarFrame:Init()
   -- Main container frame (not secure, just a visual parent)
   self.frame = CreateFrame("Frame", "BarSmithBarFrame", UIParent, "BackdropTemplate")
   self.frame:SetClampedToScreen(true)
-  self.frame:SetFrameStrata("MEDIUM")
+  self.frame:SetFrameStrata("DIALOG")
   self.frame:SetMovable(true)
 
   -- Backdrop
