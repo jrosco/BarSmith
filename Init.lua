@@ -146,6 +146,7 @@ BarSmith:RegisterEvent("ADDON_LOADED", function(self, event, addonName)
 
   -- Initialize saved variables
   self:InitDB()
+  self:SyncFiltersFromSettings()
 
   -- Initialize the dedicated bar frame
   local barFrame = self:GetModule("BarFrame")
