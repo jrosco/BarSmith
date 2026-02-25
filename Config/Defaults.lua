@@ -24,6 +24,7 @@ BarSmith.DEFAULTS = {
     barAutoHideMouseover = false,     -- fade bar until mouseover
     barAlpha = 1,                     -- bar frame alpha (0.1 - 1.0)
     flyoutDirection = "TOP",          -- TOP, BOTTOM, LEFT, RIGHT
+    tooltipModifier = "NONE",         -- NONE, ALT, SHIFT, CTRL
     barPosition = nil,                -- saved {point, relPoint, x, y}
     hideEmptyModules = true,          -- hide placeholder buttons for enabled but empty modules
     masqueEnabled = true,             -- allow Masque to skin BarSmith buttons
@@ -35,6 +36,7 @@ BarSmith.DEFAULTS = {
       columns = 10,
       alpha = 1,
       showBackdrop = true,
+      tooltipModifier = "NONE",       -- NONE, ALT, SHIFT, CTRL
       position = nil, -- {x, y} in UIParent space
       slots = {}, -- [index] = item data
     },

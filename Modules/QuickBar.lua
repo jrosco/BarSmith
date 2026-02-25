@@ -451,10 +451,10 @@ function QuickBar:CreateButton(index)
 
   btn:SetScript("OnEnter", function()
     self:CancelHideTimer()
-    self:ShowButtonTooltip(btn)
+    self:HandleTooltipEnter(btn)
   end)
-  btn:SetScript("OnLeave", function()
-    GameTooltip:Hide()
+  btn:SetScript("OnLeave", function(b)
+    self:HandleTooltipLeave(b)
     self:StartHideTimer()
   end)
 
@@ -491,6 +491,58 @@ function QuickBar:ShowButtonTooltip(btn)
   GameTooltip:AddLine(TOOLTIP_ACTION_REMOVE_COLOR .. "Remove|r: " ..
     TOOLTIP_SHORTCUT_COLOR .. "Alt + Right Click|r", 0.8, 0.8, 0.8)
   GameTooltip:Show()
+end
+
+local function NormalizeTooltipModifier(mod)
+  mod = string.upper(tostring(mod or "NONE"))
+  if mod ~= "ALT" and mod ~= "SHIFT" and mod ~= "CTRL" and mod ~= "NONE" then
+    mod = "NONE"
+  end
+  return mod
+end
+
+function QuickBar:IsTooltipModifierActive()
+  local mod = NormalizeTooltipModifier(BarSmith.chardb and BarSmith.chardb.quickBar
+    and BarSmith.chardb.quickBar.tooltipModifier)
+  if mod == "ALT" then
+    return IsAltKeyDown()
+  elseif mod == "SHIFT" then
+    return IsShiftKeyDown()
+  elseif mod == "CTRL" then
+    return IsControlKeyDown()
+  end
+  return true
+end
+
+function QuickBar:UpdateTooltipState(btn)
+  if not btn then return end
+  local allowed = self:IsTooltipModifierActive()
+  if allowed then
+    if not btn.__bsTooltipShown then
+      self:ShowButtonTooltip(btn)
+      btn.__bsTooltipShown = true
+    end
+  elseif btn.__bsTooltipShown then
+    GameTooltip:Hide()
+    btn.__bsTooltipShown = false
+  end
+end
+
+function QuickBar:HandleTooltipEnter(btn)
+  if not btn then return end
+  btn.__bsTooltipShown = false
+  self:UpdateTooltipState(btn)
+  btn:SetScript("OnUpdate", function(b)
+    self:UpdateTooltipState(b)
+  end)
+end
+
+function QuickBar:HandleTooltipLeave(btn)
+  if btn then
+    btn.__bsTooltipShown = false
+    btn:SetScript("OnUpdate", nil)
+  end
+  GameTooltip:Hide()
 end
 
 function QuickBar:UpdateLayout(forcedCount)
