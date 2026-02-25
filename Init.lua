@@ -231,6 +231,18 @@ BarSmith:RegisterEvent("QUEST_REMOVED", function(self)
   end)
 end)
 
+-- Re-fill when toy collection changes
+BarSmith:RegisterEvent("TOYS_UPDATED", function(self)
+  if not self.chardb or not self.chardb.enabled or not self.chardb.autoFill then
+    return
+  end
+  C_Timer.After(1, function()
+    if not InCombatLockdown() then
+      BarSmith:RunAutoFill()
+    end
+  end)
+end)
+
 -- Fill after combat ends if a fill was pending
 BarSmith:RegisterEvent("PLAYER_REGEN_ENABLED", function(self)
   if self.pendingFill then
