@@ -111,6 +111,7 @@ function mod:Init()
     classSpells  = "Class Special Spells",
     professions  = "Professions",
     mounts       = "Mounts",
+    toys         = "Toys",
     hearthstones = "Hearthstones",
     macros       = "Macros",
   }
@@ -566,24 +567,6 @@ function mod:Init()
       BarSmith:FireCallback("SETTINGS_CHANGED")
     end)
     Settings.CreateCheckbox(modulesCategory, setting, tooltip)
-  end
-
-  ---------- Item Filters ----------
-  filtersLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Item Filters"))
-
-  do
-    local variable = "BarSmith_Filter_BGOnly"
-    local name = "Include Battleground-Only Items"
-    local tooltip = "Include items with \"Only usable in battlegrounds\" even when you are not in a battleground."
-    local defaultValue = defaultsChar.filters and defaultsChar.filters.battleground_only_items ~= false
-    local setting = Settings.RegisterAddOnSetting(filtersCategory, variable, variable, settingsProxy, "boolean", name,
-    defaultValue)
-    Settings.SetOnValueChangedCallback(variable, function(_, _, val)
-      BarSmith.chardb.filters.battleground_only_items = val
-      BarSmith:SetFilterEnabled("battleground_only_items", val)
-      BarSmith:FireCallback("SETTINGS_CHANGED")
-    end)
-    Settings.CreateCheckbox(filtersCategory, setting, tooltip)
   end
 
   ---------- Consumable Options ----------

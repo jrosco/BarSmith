@@ -238,13 +238,21 @@ function BarSmith:GetExpandedPriority()
   end
 
   local expanded = {}
+  local seen = {}
+  local function addEntry(name)
+    if not name or seen[name] then
+      return
+    end
+    seen[name] = true
+    table.insert(expanded, name)
+  end
   local modules = self.chardb and self.chardb.modules or {}
   local con = self.chardb and self.chardb.consumables or {}
   local split = con.split or {}
 
   for _, modName in ipairs(priority) do
     if modName ~= "consumables" then
-      table.insert(expanded, modName)
+      addEntry(modName)
     else
       if modules.consumables == false then
         -- skip all consumables and split entries when disabled
@@ -253,7 +261,7 @@ function BarSmith:GetExpandedPriority()
 
         local function addSplit(flagKey, suffix, includeFlag)
           if split[flagKey] then
-            table.insert(expanded, "consumables_" .. suffix)
+            addEntry("consumables_" .. suffix)
             return
           end
           if includeFlag then
@@ -268,7 +276,7 @@ function BarSmith:GetExpandedPriority()
         addSplit("utilities", "utility", con.utilities)
 
         if anyParent then
-          table.insert(expanded, "consumables")
+          addEntry("consumables")
         end
       end
     end
@@ -348,6 +356,14 @@ function BarSmith:IsIncludedMount(mountID)
   return include[mountID] == true
 end
 
+function BarSmith:IsIncludedToy(toyID)
+  local include = self.chardb and self.chardb.toys and self.chardb.toys.include
+  if not include or not toyID then
+    return false
+  end
+  return include[toyID] == true
+end
+
 function BarSmith:IsManualItem(data)
   if not data then return false end
 
@@ -360,6 +376,10 @@ function BarSmith:IsManualItem(data)
   end
 
   if data.type == "mount" and data.mountID and self:IsIncludedMount(data.mountID) then
+    return true
+  end
+
+  if data.type == "toy" and data.toyID and self:IsIncludedToy(data.toyID) then
     return true
   end
 
@@ -432,6 +452,11 @@ function BarSmith:RemoveFromExcludeForSpellID(spellID)
   return self:RemoveFromExcludeByKey("spell:" .. tostring(spellID))
 end
 
+function BarSmith:RemoveFromExcludeForToyID(toyID)
+  if not toyID then return false end
+  return self:RemoveFromExcludeByKey("toy:" .. tostring(toyID))
+end
+
 -- Backward-compatible wrappers
 
 function BarSmith:ClearInclude()
@@ -449,6 +474,10 @@ function BarSmith:ClearInclude()
 
   if self.chardb.mounts then
     self.chardb.mounts.include = {}
+  end
+
+  if self.chardb.toys then
+    self.chardb.toys.include = {}
   end
 
   if self.chardb.classSpells then
