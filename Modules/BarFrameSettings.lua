@@ -175,7 +175,7 @@ function BarFrameSettings:CreateIncludeExcludeFrame()
   local frame = CreateFrame("Frame", "BarSmithIncludeExcludeFrame", UIParent, "BackdropTemplate")
   frame:SetSize(INCLUDE_EXCLUDE_FRAME_WIDTH, INCLUDE_EXCLUDE_FRAME_HEIGHT)
   frame:SetClampedToScreen(true)
-  frame:SetFrameStrata("DIALOG")
+  frame:SetFrameStrata("TOOLTIP")
   frame:Hide()
 
   frame:SetBackdrop({
