@@ -20,6 +20,7 @@ Config\Settings.lua
 
 # Modules (load order matters)
 Modules\Scanner.lua
+Modules\Filters.lua
 Modules\QuestItems.lua
 Modules\Consumables.lua
 Modules\Trinkets.lua

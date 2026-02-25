@@ -71,6 +71,9 @@ BarSmith.DEFAULTS = {
     -- Per-module pinned primary action identity (overrides last used when set).
     pinnedByModule = {},
     exclude = {},
+    filters = {
+      battleground_only_items = true,
+    },
     autoAdded = {},
 
     -- Consumable sub-categories

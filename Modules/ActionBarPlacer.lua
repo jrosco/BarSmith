@@ -102,7 +102,7 @@ function Placer:GatherItems()
       local ok, items = pcall(getters[modName])
       if ok and items then
         for _, item in ipairs(items) do
-          if not BarSmith:IsExcluded(item) then
+          if not BarSmith:IsExcluded(item) and BarSmith:ItemPassesFilters(item) then
             local key = BarSmith:GetActionIdentityKey(item)
             local isAuto = not BarSmith:IsManualItem(item)
             item.autoAdded = isAuto
