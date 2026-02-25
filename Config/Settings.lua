@@ -862,6 +862,20 @@ function mod:Init()
     Settings.CreateCheckbox(advancedCategory, setting, tooltip)
   end
 
+  advancedLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Actions"))
+
+  do
+    local initializer = Settings.CreateElementInitializer("BarSmithSettingsButtonTemplate", {
+      text = "Refill Bar Now",
+      buttonText = "Refill",
+      OnClick = function()
+        BarSmith:Print("Refill requested.")
+        BarSmith:RunAutoFill(true)
+      end,
+    })
+    advancedLayout:AddInitializer(initializer)
+  end
+
   advancedLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Reset Settings"))
 
   do
