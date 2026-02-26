@@ -33,6 +33,10 @@ Modules\Macros.lua
 Modules\BarFrameSettings.lua
 Modules\QuickBar.lua
 Modules\BarFrame.lua
+Modules\BarFrameButtons.lua
+Modules\BarFrameFlyout.lua
+Modules\BarFrameTooltip.lua
+Modules\BarFrameUpdates.lua
 Modules\Minimap.lua
 Modules\ActionBarPlacer.lua
 
