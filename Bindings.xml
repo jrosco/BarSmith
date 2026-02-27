@@ -35,6 +35,9 @@
   <Binding name="CLICK BarSmithModule_mounts:LeftButton">
     -- Mounts
   </Binding>
+  <Binding name="CLICK BarSmithModule_toys:LeftButton">
+    -- Toys
+  </Binding>
   <Binding name="CLICK BarSmithModule_hearthstones:LeftButton">
     -- Hearthstones
   </Binding>

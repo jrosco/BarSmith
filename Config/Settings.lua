@@ -47,6 +47,15 @@ local function BuildDirectionDropdownOptions()
   return container:GetData()
 end
 
+local function BuildTooltipModifierOptions()
+  local container = Settings.CreateControlTextContainer()
+  container:Add("NONE", "None")
+  container:Add("ALT", "Alt")
+  container:Add("SHIFT", "Shift")
+  container:Add("CTRL", "Ctrl")
+  return container:GetData()
+end
+
 ------------------------------------------------------------------------
 -- Build Settings Panel
 ------------------------------------------------------------------------
@@ -75,12 +84,14 @@ function mod:Init()
   settingsProxy["BarSmith_ShowBackdrop"]      = (BarSmith.chardb.barShowBackdrop ~= false)
   settingsProxy["BarSmith_AutoHideMouseover"] = (BarSmith.chardb.barAutoHideMouseover == true)
   settingsProxy["BarSmith_FlyoutDirection"]   = BarSmith.chardb.flyoutDirection or "TOP"
+  settingsProxy["BarSmith_Tooltip_Mod"]       = BarSmith.chardb.tooltipModifier or "NONE"
   settingsProxy["BarSmith_HideEmptyModules"]  = (BarSmith.chardb.hideEmptyModules ~= false)
   settingsProxy["BarSmith_QB_Enabled"]        = (BarSmith.chardb.quickBar.enabled ~= false)
   settingsProxy["BarSmith_QB_IconSize"]       = BarSmith.chardb.quickBar.iconSize or 32
   settingsProxy["BarSmith_QB_Columns"]        = BarSmith.chardb.quickBar.columns or 6
   settingsProxy["BarSmith_QB_Alpha"]          = BarSmith.chardb.quickBar.alpha or 1
   settingsProxy["BarSmith_QB_ShowBackdrop"]   = (BarSmith.chardb.quickBar.showBackdrop ~= false)
+  settingsProxy["BarSmith_QB_Tooltip_Mod"]    = BarSmith.chardb.quickBar.tooltipModifier or "NONE"
   settingsProxy["BarSmith_QB_Preview"]        = false
   settingsProxy["BarSmith_Masque"]            = (BarSmith.chardb.masqueEnabled == true)
   settingsProxy["BarSmith_Mounts_Random"]     = BarSmith.chardb.mounts.randomMount
@@ -102,6 +113,7 @@ function mod:Init()
   settingsProxy["BarSmith_Con_SplitCur_Food"]    = BarSmith.chardb.consumables.splitCurrentExpansion.food
   settingsProxy["BarSmith_Con_SplitCur_Bandages"]= BarSmith.chardb.consumables.splitCurrentExpansion.bandages
   settingsProxy["BarSmith_Con_SplitCur_Utilities"]= BarSmith.chardb.consumables.splitCurrentExpansion.utilities
+  settingsProxy["BarSmith_Filter_BGOnly"] = BarSmith.chardb.filters and BarSmith.chardb.filters.battleground_only_items ~= false
 
   local moduleLabels = {
     questItems   = "Quest Items",
@@ -110,6 +122,7 @@ function mod:Init()
     classSpells  = "Class Special Spells",
     professions  = "Professions",
     mounts       = "Mounts",
+    toys         = "Toys",
     hearthstones = "Hearthstones",
     macros       = "Macros",
   }
@@ -198,20 +211,6 @@ function mod:Init()
     defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       BarSmith.chardb.autoFill = val
-    end)
-    Settings.CreateCheckbox(category, setting, tooltip)
-  end
-
-  -- Confirm before fill
-  do
-    local variable = "BarSmith_Confirm"
-    local name = "Confirm Before Placing"
-    local tooltip = "Show a confirmation popup before items are placed on the bar."
-    local defaultValue = defaultsChar.confirmBeforeFill == true
-    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name,
-    defaultValue)
-    Settings.SetOnValueChangedCallback(variable, function(_, _, val)
-      BarSmith.chardb.confirmBeforeFill = val
     end)
     Settings.CreateCheckbox(category, setting, tooltip)
   end
@@ -353,6 +352,25 @@ function mod:Init()
     Settings.CreateDropdown(category, setting, BuildDirectionDropdownOptions, tooltip)
   end
 
+  -- Tooltip modifier (main bar)
+  do
+    local variable = "BarSmith_Tooltip_Mod"
+    local name = "Tooltip Modifier"
+    local tooltip = "Only show BarSmith tooltips when this modifier is held."
+    local defaultValue = defaultsChar.tooltipModifier or "NONE"
+    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "string", name,
+    defaultValue)
+    Settings.SetOnValueChangedCallback(variable, function(_, _, val)
+      local mod = string.upper(tostring(val or "NONE"))
+      if mod ~= "ALT" and mod ~= "SHIFT" and mod ~= "CTRL" and mod ~= "NONE" then
+        mod = "NONE"
+      end
+      BarSmith.chardb.tooltipModifier = mod
+      settingsProxy[variable] = mod
+    end)
+    Settings.CreateDropdown(category, setting, BuildTooltipModifierOptions, tooltip)
+  end
+
   ---------- QuickBar ----------
   -- quickBarLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer("QuickBar"))
 
@@ -468,6 +486,25 @@ function mod:Init()
       end
     end)
     Settings.CreateCheckbox(quickBarCategory, setting, tooltip)
+  end
+
+  -- QuickBar tooltip modifier
+  do
+    local variable = "BarSmith_QB_Tooltip_Mod"
+    local name = "Tooltip Modifier (QuickBar)"
+    local tooltip = "Only show QuickBar tooltips when this modifier is held."
+    local defaultValue = defaultsChar.quickBar and defaultsChar.quickBar.tooltipModifier or "NONE"
+    local setting = Settings.RegisterAddOnSetting(quickBarCategory, variable, variable, settingsProxy, "string", name,
+      defaultValue)
+    Settings.SetOnValueChangedCallback(variable, function(_, _, val)
+      local mod = string.upper(tostring(val or "NONE"))
+      if mod ~= "ALT" and mod ~= "SHIFT" and mod ~= "CTRL" and mod ~= "NONE" then
+        mod = "NONE"
+      end
+      BarSmith.chardb.quickBar.tooltipModifier = mod
+      settingsProxy[variable] = mod
+    end)
+    Settings.CreateDropdown(quickBarCategory, setting, BuildTooltipModifierOptions, tooltip)
   end
 
   ---------- Modules ----------
@@ -731,6 +768,24 @@ function mod:Init()
     Settings.CreateCheckbox(filtersCategory, setting, tooltip)
   end
 
+  ---------- Item Filters ----------
+  filtersLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Item Filters"))
+
+  do
+    local variable = "BarSmith_Filter_BGOnly"
+    local name = "Include Battleground-Only Items"
+    local tooltip = "Include items with \"Only usable in battlegrounds\" even when you are not in a battleground."
+    local defaultValue = defaultsChar.filters and defaultsChar.filters.battleground_only_items ~= false
+    local setting = Settings.RegisterAddOnSetting(filtersCategory, variable, variable, settingsProxy, "boolean", name,
+      defaultValue)
+    Settings.SetOnValueChangedCallback(variable, function(_, _, val)
+      BarSmith.chardb.filters.battleground_only_items = val
+      BarSmith:SetFilterEnabled("battleground_only_items", val)
+      BarSmith:FireCallback("SETTINGS_CHANGED")
+    end)
+    Settings.CreateCheckbox(filtersCategory, setting, tooltip)
+  end
+
   ---------- Mount Options ----------
 
   mountLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Options"))
@@ -768,30 +823,57 @@ function mod:Init()
   advancedLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Advanced"))
 
   do
+    local variable = "BarSmith_Masque"
+    local name = "Enable Masque Skinning"
+    local tooltip = "Allow Masque to skin BarSmith buttons (requires Masque)."
+    local defaultValue = defaultsChar.masqueEnabled == true
+    local setting = Settings.RegisterAddOnSetting(advancedCategory, variable, variable, settingsProxy, "boolean", name,
+      defaultValue)
+    Settings.SetOnValueChangedCallback(variable, function(_, _, val)
+      BarSmith.chardb.masqueEnabled = (val == true)
+      BarSmith:MasqueRefreshAll()
+    end)
+    Settings.CreateCheckbox(advancedCategory, setting, tooltip)
+  end
+
+  do
+    local variable = "BarSmith_Confirm"
+    local name = "Confirm Before Placing"
+    local tooltip = "Show a confirmation popup before items are placed on the bar."
+    local defaultValue = defaultsChar.confirmBeforeFill == true
+    local setting = Settings.RegisterAddOnSetting(advancedCategory, variable, variable, settingsProxy, "boolean", name,
+    defaultValue)
+    Settings.SetOnValueChangedCallback(variable, function(_, _, val)
+      BarSmith.chardb.confirmBeforeFill = val
+    end)
+    Settings.CreateCheckbox(advancedCategory, setting, tooltip)
+  end
+
+  do
     local variable = "BarSmith_Debug"
     local name = "Debug Mode"
     local tooltip = "Print debug messages to chat."
     local defaultValue = defaultsGlobal.debug == true
     local setting = Settings.RegisterAddOnSetting(advancedCategory, variable, variable, settingsProxy, "boolean", name,
-    defaultValue)
+      defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       BarSmith.db.debug = val
     end)
     Settings.CreateCheckbox(advancedCategory, setting, tooltip)
   end
 
+  advancedLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Actions"))
+
   do
-    local variable = "BarSmith_Masque"
-    local name = "Enable Masque Skinning"
-    local tooltip = "Allow Masque to skin BarSmith buttons (requires Masque)."
-    local defaultValue = defaultsChar.masqueEnabled == true
-    local setting = Settings.RegisterAddOnSetting(advancedCategory, variable, variable, settingsProxy, "boolean", name,
-    defaultValue)
-    Settings.SetOnValueChangedCallback(variable, function(_, _, val)
-      BarSmith.chardb.masqueEnabled = (val == true)
-      BarSmith:MasqueRefreshAll()
-    end)
-    Settings.CreateCheckbox(advancedCategory, setting, tooltip)
+    local initializer = Settings.CreateElementInitializer("BarSmithSettingsButtonTemplate", {
+      text = "Refill Bar Now",
+      buttonText = "Refill",
+      OnClick = function()
+        BarSmith:Print("Refill requested.")
+        BarSmith:RunAutoFill(true)
+      end,
+    })
+    advancedLayout:AddInitializer(initializer)
   end
 
   advancedLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Reset Settings"))

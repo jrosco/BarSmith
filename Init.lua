@@ -146,6 +146,7 @@ BarSmith:RegisterEvent("ADDON_LOADED", function(self, event, addonName)
 
   -- Initialize saved variables
   self:InitDB()
+  self:SyncFiltersFromSettings()
 
   -- Initialize the dedicated bar frame
   local barFrame = self:GetModule("BarFrame")
@@ -220,6 +221,18 @@ BarSmith:RegisterEvent("QUEST_ACCEPTED", function(self)
 end)
 
 BarSmith:RegisterEvent("QUEST_REMOVED", function(self)
+  if not self.chardb or not self.chardb.enabled or not self.chardb.autoFill then
+    return
+  end
+  C_Timer.After(1, function()
+    if not InCombatLockdown() then
+      BarSmith:RunAutoFill()
+    end
+  end)
+end)
+
+-- Re-fill when toy collection changes
+BarSmith:RegisterEvent("TOYS_UPDATED", function(self)
   if not self.chardb or not self.chardb.enabled or not self.chardb.autoFill then
     return
   end

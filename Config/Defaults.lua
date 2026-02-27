@@ -24,6 +24,7 @@ BarSmith.DEFAULTS = {
     barAutoHideMouseover = false,     -- fade bar until mouseover
     barAlpha = 1,                     -- bar frame alpha (0.1 - 1.0)
     flyoutDirection = "TOP",          -- TOP, BOTTOM, LEFT, RIGHT
+    tooltipModifier = "NONE",         -- NONE, ALT, SHIFT, CTRL
     barPosition = nil,                -- saved {point, relPoint, x, y}
     hideEmptyModules = true,          -- hide placeholder buttons for enabled but empty modules
     masqueEnabled = true,             -- allow Masque to skin BarSmith buttons
@@ -35,6 +36,7 @@ BarSmith.DEFAULTS = {
       columns = 10,
       alpha = 1,
       showBackdrop = true,
+      tooltipModifier = "NONE",       -- NONE, ALT, SHIFT, CTRL
       position = nil, -- {x, y} in UIParent space
       slots = {}, -- [index] = item data
     },
@@ -47,6 +49,7 @@ BarSmith.DEFAULTS = {
       classSpells  = true,
       professions  = false,
       mounts       = true,
+      toys         = false,
       hearthstones = true,
       macros       = false,
     },
@@ -59,6 +62,7 @@ BarSmith.DEFAULTS = {
       "trinkets",
       "professions",
       "mounts",
+      "toys",
       "classSpells",
       "macros",
     },
@@ -69,6 +73,9 @@ BarSmith.DEFAULTS = {
     -- Per-module pinned primary action identity (overrides last used when set).
     pinnedByModule = {},
     exclude = {},
+    filters = {
+      battleground_only_items = true,
+    },
     autoAdded = {},
 
     -- Consumable sub-categories
@@ -114,6 +121,11 @@ BarSmith.DEFAULTS = {
       dragonriding = true,         -- include dragonriding / skyriding
       include      = {},           -- mountID -> true (always include)
       topFavorites = false,        -- add top favorite mounts
+    },
+
+    -- Toy settings
+    toys = {
+      include = {},                -- toyID -> true (always include)
     },
 
     -- Hearthstone settings
@@ -226,6 +238,8 @@ function BarSmith:ResetCharacterSettingsKeepLists()
     and CopyTable(chardb.consumables.include) or nil
   local keepMountInclude = chardb.mounts and chardb.mounts.include
     and CopyTable(chardb.mounts.include) or nil
+  local keepToyInclude = chardb.toys and chardb.toys.include
+    and CopyTable(chardb.toys.include) or nil
   local keepClassSpells = chardb.classSpells and chardb.classSpells.customSpellIDs
     and CopyTable(chardb.classSpells.customSpellIDs) or nil
   local keepMacroSlots = chardb.macros and chardb.macros.slots
@@ -242,6 +256,9 @@ function BarSmith:ResetCharacterSettingsKeepLists()
   end
   if keepMountInclude then
     self.chardb.mounts.include = keepMountInclude
+  end
+  if keepToyInclude then
+    self.chardb.toys.include = keepToyInclude
   end
   if keepClassSpells then
     self.chardb.classSpells.customSpellIDs = keepClassSpells
