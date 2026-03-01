@@ -172,6 +172,19 @@ function BarSmith:InitDB()
     self.chardb.priority = CopyTable(self.DEFAULTS.char.priority)
   end
 
+  -- Normalize module toggles to strict booleans (guards against legacy non-boolean values).
+  do
+    local defaults = self.DEFAULTS and self.DEFAULTS.char and self.DEFAULTS.char.modules or {}
+    for key, defaultValue in pairs(defaults) do
+      local value = self.chardb.modules[key]
+      if value == nil then
+        self.chardb.modules[key] = (defaultValue == true)
+      else
+        self.chardb.modules[key] = (value == true)
+      end
+    end
+  end
+
   -- Ensure priority list contains any newly added default modules.
   self:SyncPriorityWithDefaults()
 end
@@ -228,6 +241,9 @@ function BarSmith:ResetCharacterSettings()
   BarSmithCharDB = CopyTable(self.DEFAULTS.char)
   self.chardb = BarSmithCharDB
   self:Print("Character settings reset to defaults.")
+  if self.RefreshSettingsProxy then
+    self:RefreshSettingsProxy()
+  end
   self:FireCallback("SETTINGS_CHANGED")
 end
 
@@ -268,6 +284,9 @@ function BarSmith:ResetCharacterSettingsKeepLists()
   end
 
   self:Print("Settings reset (includes/excludes preserved).")
+  if self.RefreshSettingsProxy then
+    self:RefreshSettingsProxy()
+  end
   self:FireCallback("SETTINGS_CHANGED")
 end
 
@@ -275,5 +294,8 @@ function BarSmith:ResetGlobalSettings()
   BarSmithDB = CopyTable(self.DEFAULTS.global)
   self.db = BarSmithDB
   self:Print("Global settings reset to defaults.")
+  if self.RefreshSettingsProxy then
+    self:RefreshSettingsProxy()
+  end
   self:FireCallback("SETTINGS_CHANGED")
 end

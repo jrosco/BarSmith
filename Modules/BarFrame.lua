@@ -554,6 +554,10 @@ function BarFrame:SetLocked(locked)
     BarSmith.chardb._autoHideBeforeUnlock = nil
   end
   BarSmith.chardb.barLocked = locked
+  if BarSmith.UpdateSettingsProxy then
+    BarSmith:UpdateSettingsProxy("BarSmith_Locked", locked)
+    BarSmith:UpdateSettingsProxy("BarSmith_AutoHideMouseover", BarSmith.chardb.barAutoHideMouseover == true)
+  end
   self:UpdateLayout()
   self:UpdateAutoHideState()
 

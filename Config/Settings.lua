@@ -38,6 +38,74 @@ local settingsProxy = {}
 local defaultsChar = BarSmith.DEFAULTS and BarSmith.DEFAULTS.char or {}
 local defaultsGlobal = BarSmith.DEFAULTS and BarSmith.DEFAULTS.global or {}
 
+local MODULE_LABELS = {
+  questItems   = "Quest Items",
+  consumables  = "Consumables (Potions, Food, Flasks)",
+  trinkets     = "Trinkets",
+  classSpells  = "Class Special Spells",
+  professions  = "Professions",
+  mounts       = "Mounts",
+  toys         = "Toys",
+  hearthstones = "Hearthstones",
+  macros       = "Macros",
+}
+
+function BarSmith:UpdateSettingsProxy(key, value)
+  if not key then return end
+  settingsProxy[key] = value
+end
+
+function BarSmith:RefreshSettingsProxy()
+  if not BarSmith.chardb then return end
+
+  settingsProxy["BarSmith_Enabled"]           = BarSmith.chardb.enabled
+  settingsProxy["BarSmith_AutoFill"]          = BarSmith.chardb.autoFill
+  settingsProxy["BarSmith_Confirm"]           = BarSmith.chardb.confirmBeforeFill
+  settingsProxy["BarSmith_Locked"]            = BarSmith.chardb.barLocked
+  settingsProxy["BarSmith_Columns"]           = BarSmith.chardb.barColumns
+  settingsProxy["BarSmith_IconSize"]          = BarSmith.chardb.barIconSize or 36
+  settingsProxy["BarSmith_Alpha"]             = BarSmith.chardb.barAlpha or 1
+  settingsProxy["BarSmith_ShowBackdrop"]      = (BarSmith.chardb.barShowBackdrop ~= false)
+  settingsProxy["BarSmith_AutoHideMouseover"] = (BarSmith.chardb.barAutoHideMouseover == true)
+  settingsProxy["BarSmith_FlyoutDirection"]   = BarSmith.chardb.flyoutDirection or "TOP"
+  settingsProxy["BarSmith_Tooltip_Mod"]       = BarSmith.chardb.tooltipModifier or "NONE"
+  settingsProxy["BarSmith_HideEmptyModules"]  = (BarSmith.chardb.hideEmptyModules ~= false)
+  settingsProxy["BarSmith_QB_Enabled"]        = (BarSmith.chardb.quickBar.enabled ~= false)
+  settingsProxy["BarSmith_QB_IconSize"]       = BarSmith.chardb.quickBar.iconSize or 32
+  settingsProxy["BarSmith_QB_Columns"]        = BarSmith.chardb.quickBar.columns or 6
+  settingsProxy["BarSmith_QB_Alpha"]          = BarSmith.chardb.quickBar.alpha or 1
+  settingsProxy["BarSmith_QB_ShowBackdrop"]   = (BarSmith.chardb.quickBar.showBackdrop ~= false)
+  settingsProxy["BarSmith_QB_Tooltip_Mod"]    = BarSmith.chardb.quickBar.tooltipModifier or "NONE"
+  settingsProxy["BarSmith_QB_Preview"]        = false
+  settingsProxy["BarSmith_Masque"]            = (BarSmith.chardb.masqueEnabled == true)
+  settingsProxy["BarSmith_Mounts_Random"]     = BarSmith.chardb.mounts.randomMount
+  settingsProxy["BarSmith_Mounts_TopFavs"]    = BarSmith.chardb.mounts.topFavorites
+  settingsProxy["BarSmith_Debug"]             = BarSmith.db and BarSmith.db.debug
+  settingsProxy["BarSmith_Con_Potions"]       = BarSmith.chardb.consumables.potions
+  settingsProxy["BarSmith_Con_Flasks"]        = BarSmith.chardb.consumables.flasks
+  settingsProxy["BarSmith_Con_Food"]          = BarSmith.chardb.consumables.food
+  settingsProxy["BarSmith_Con_Bandages"]      = BarSmith.chardb.consumables.bandages
+  settingsProxy["BarSmith_Con_Utilities"]     = BarSmith.chardb.consumables.utilities
+  settingsProxy["BarSmith_Con_CurrentOnly"]   = BarSmith.chardb.consumables.currentExpansionOnly
+  settingsProxy["BarSmith_Con_Split_Potions"] = BarSmith.chardb.consumables.split.potions
+  settingsProxy["BarSmith_Con_Split_Flasks"]  = BarSmith.chardb.consumables.split.flasks
+  settingsProxy["BarSmith_Con_Split_Food"]    = BarSmith.chardb.consumables.split.food
+  settingsProxy["BarSmith_Con_Split_Bandages"]= BarSmith.chardb.consumables.split.bandages
+  settingsProxy["BarSmith_Con_Split_Utilities"]= BarSmith.chardb.consumables.split.utilities
+  settingsProxy["BarSmith_Con_SplitCur_Potions"] = BarSmith.chardb.consumables.splitCurrentExpansion.potions
+  settingsProxy["BarSmith_Con_SplitCur_Flasks"]  = BarSmith.chardb.consumables.splitCurrentExpansion.flasks
+  settingsProxy["BarSmith_Con_SplitCur_Food"]    = BarSmith.chardb.consumables.splitCurrentExpansion.food
+  settingsProxy["BarSmith_Con_SplitCur_Bandages"]= BarSmith.chardb.consumables.splitCurrentExpansion.bandages
+  settingsProxy["BarSmith_Con_SplitCur_Utilities"]= BarSmith.chardb.consumables.splitCurrentExpansion.utilities
+  settingsProxy["BarSmith_Filter_BGOnly"] = BarSmith.chardb.filters and BarSmith.chardb.filters.battleground_only_items ~= false
+
+  for key in pairs(MODULE_LABELS) do
+    settingsProxy["BarSmith_Mod_" .. key] = BarSmith.chardb.modules[key]
+  end
+
+  BarSmith:Debug("Settings proxy refreshed.")
+end
+
 local function BuildDirectionDropdownOptions()
   local container = Settings.CreateControlTextContainer()
   container:Add("TOP", "Top")
@@ -73,63 +141,13 @@ function mod:Init()
   local mountCategory, mountLayout            = Settings.RegisterVerticalLayoutSubcategory(category, "Mounts")
   local advancedCategory, advancedLayout      = Settings.RegisterVerticalLayoutSubcategory(category, "Advanced")
 
-  -- Seed proxy with current values
-  settingsProxy["BarSmith_Enabled"]           = BarSmith.chardb.enabled
-  settingsProxy["BarSmith_AutoFill"]          = BarSmith.chardb.autoFill
-  settingsProxy["BarSmith_Confirm"]           = BarSmith.chardb.confirmBeforeFill
-  settingsProxy["BarSmith_Locked"]            = BarSmith.chardb.barLocked
-  settingsProxy["BarSmith_Columns"]           = BarSmith.chardb.barColumns
-  settingsProxy["BarSmith_IconSize"]          = BarSmith.chardb.barIconSize or 36
-  settingsProxy["BarSmith_Alpha"]             = BarSmith.chardb.barAlpha or 1
-  settingsProxy["BarSmith_ShowBackdrop"]      = (BarSmith.chardb.barShowBackdrop ~= false)
-  settingsProxy["BarSmith_AutoHideMouseover"] = (BarSmith.chardb.barAutoHideMouseover == true)
-  settingsProxy["BarSmith_FlyoutDirection"]   = BarSmith.chardb.flyoutDirection or "TOP"
-  settingsProxy["BarSmith_Tooltip_Mod"]       = BarSmith.chardb.tooltipModifier or "NONE"
-  settingsProxy["BarSmith_HideEmptyModules"]  = (BarSmith.chardb.hideEmptyModules ~= false)
-  settingsProxy["BarSmith_QB_Enabled"]        = (BarSmith.chardb.quickBar.enabled ~= false)
-  settingsProxy["BarSmith_QB_IconSize"]       = BarSmith.chardb.quickBar.iconSize or 32
-  settingsProxy["BarSmith_QB_Columns"]        = BarSmith.chardb.quickBar.columns or 6
-  settingsProxy["BarSmith_QB_Alpha"]          = BarSmith.chardb.quickBar.alpha or 1
-  settingsProxy["BarSmith_QB_ShowBackdrop"]   = (BarSmith.chardb.quickBar.showBackdrop ~= false)
-  settingsProxy["BarSmith_QB_Tooltip_Mod"]    = BarSmith.chardb.quickBar.tooltipModifier or "NONE"
-  settingsProxy["BarSmith_QB_Preview"]        = false
-  settingsProxy["BarSmith_Masque"]            = (BarSmith.chardb.masqueEnabled == true)
-  settingsProxy["BarSmith_Mounts_Random"]     = BarSmith.chardb.mounts.randomMount
-  settingsProxy["BarSmith_Mounts_TopFavs"]    = BarSmith.chardb.mounts.topFavorites
-  settingsProxy["BarSmith_Debug"]             = BarSmith.db.debug
-  settingsProxy["BarSmith_Con_Potions"]       = BarSmith.chardb.consumables.potions
-  settingsProxy["BarSmith_Con_Flasks"]        = BarSmith.chardb.consumables.flasks
-  settingsProxy["BarSmith_Con_Food"]          = BarSmith.chardb.consumables.food
-  settingsProxy["BarSmith_Con_Bandages"]      = BarSmith.chardb.consumables.bandages
-  settingsProxy["BarSmith_Con_Utilities"]     = BarSmith.chardb.consumables.utilities
-  settingsProxy["BarSmith_Con_CurrentOnly"]   = BarSmith.chardb.consumables.currentExpansionOnly
-  settingsProxy["BarSmith_Con_Split_Potions"] = BarSmith.chardb.consumables.split.potions
-  settingsProxy["BarSmith_Con_Split_Flasks"]  = BarSmith.chardb.consumables.split.flasks
-  settingsProxy["BarSmith_Con_Split_Food"]    = BarSmith.chardb.consumables.split.food
-  settingsProxy["BarSmith_Con_Split_Bandages"]= BarSmith.chardb.consumables.split.bandages
-  settingsProxy["BarSmith_Con_Split_Utilities"]= BarSmith.chardb.consumables.split.utilities
-  settingsProxy["BarSmith_Con_SplitCur_Potions"] = BarSmith.chardb.consumables.splitCurrentExpansion.potions
-  settingsProxy["BarSmith_Con_SplitCur_Flasks"]  = BarSmith.chardb.consumables.splitCurrentExpansion.flasks
-  settingsProxy["BarSmith_Con_SplitCur_Food"]    = BarSmith.chardb.consumables.splitCurrentExpansion.food
-  settingsProxy["BarSmith_Con_SplitCur_Bandages"]= BarSmith.chardb.consumables.splitCurrentExpansion.bandages
-  settingsProxy["BarSmith_Con_SplitCur_Utilities"]= BarSmith.chardb.consumables.splitCurrentExpansion.utilities
-  settingsProxy["BarSmith_Filter_BGOnly"] = BarSmith.chardb.filters and BarSmith.chardb.filters.battleground_only_items ~= false
-
-  local moduleLabels = {
-    questItems   = "Quest Items",
-    consumables  = "Consumables (Potions, Food, Flasks)",
-    trinkets     = "Trinkets",
-    classSpells  = "Class Special Spells",
-    professions  = "Professions",
-    mounts       = "Mounts",
-    toys         = "Toys",
-    hearthstones = "Hearthstones",
-    macros       = "Macros",
-  }
-
-  for key, _ in pairs(moduleLabels) do
-    settingsProxy["BarSmith_Mod_" .. key] = BarSmith.chardb.modules[key]
+  if not self._settingsChangedHooked then
+    BarSmith:RegisterCallback("SETTINGS_CHANGED", self, self.OnSettingsChanged)
+    self._settingsChangedHooked = true
   end
+
+  -- Seed proxy with current values
+  BarSmith:RefreshSettingsProxy()
 
   ---------- General ----------
   layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("General"))
@@ -511,7 +529,7 @@ function mod:Init()
 
   -- modulesLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Modules"))
 
-  for key, label in pairs(moduleLabels) do
+  for key, label in pairs(MODULE_LABELS) do
     local variable = "BarSmith_Mod_" .. key
     local defaultValue = true
     if BarSmith.DEFAULTS and BarSmith.DEFAULTS.char and BarSmith.DEFAULTS.char.modules then
@@ -522,6 +540,18 @@ function mod:Init()
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       BarSmith.chardb.modules[key] = val
       BarSmith:FireCallback("SETTINGS_CHANGED")
+      -- Allow toys to load and wait before trying to enable the module
+      if key == "toys" and val == true then
+        C_Timer.After(1.5, function()
+          if not BarSmith.chardb or not BarSmith.chardb.modules
+            or BarSmith.chardb.modules.toys ~= true then
+            return
+          end
+          if not InCombatLockdown() then
+            BarSmith:RunAutoFill(true)
+          end
+        end)
+      end
     end)
     Settings.CreateCheckbox(modulesCategory, setting, "Enable or disable the " .. label .. " module.")
   end
@@ -982,4 +1012,8 @@ function mod:Init()
   end
 
   Settings.RegisterAddOnCategory(category)
+end
+
+function mod:OnSettingsChanged()
+  BarSmith:RefreshSettingsProxy()
 end

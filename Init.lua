@@ -187,7 +187,7 @@ BarSmith:RegisterEvent("PLAYER_ENTERING_WORLD", function(self, event, isLogin, i
   -- Delay the first fill to let item cache populate
   C_Timer.After(3, function()
     if not InCombatLockdown() then
-      BarSmith:RunAutoFill()
+      BarSmith:RunAutoFill(true)
     end
   end)
 end)
