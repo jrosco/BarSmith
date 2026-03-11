@@ -18,6 +18,76 @@ local function IsExcludeRemoveClick(button)
   return button == "RightButton" and IsShiftKeyDown() and IsControlKeyDown()
 end
 
+local function GetTargetModuleFromButton(btn)
+  if not btn then return nil end
+  if btn.groupData and btn.groupData.module then
+    return btn.groupData.module
+  end
+  if btn.itemData and btn.itemData.module then
+    return btn.itemData.module
+  end
+  if btn.parentButton and btn.parentButton.groupData and btn.parentButton.groupData.module then
+    return btn.parentButton.groupData.module
+  end
+  if btn.parentButton and btn.parentButton.itemData and btn.parentButton.itemData.module then
+    return btn.parentButton.itemData.module
+  end
+  return nil
+end
+
+local function GetConsumableModuleName(itemID)
+  local prefs = BarSmith.chardb and BarSmith.chardb.consumables
+  local split = prefs and prefs.split or {}
+  local con = BarSmith:GetModule("Consumables")
+  local category = con and con.ClassifyExtraCategory and con:ClassifyExtraCategory(itemID)
+  if category and split[category] then
+    if category == "potions" then
+      return "consumables_potions"
+    elseif category == "flasks" then
+      return "consumables_flask"
+    elseif category == "food" then
+      return "consumables_food"
+    elseif category == "bandages" then
+      return "consumables_bandage"
+    elseif category == "utilities" then
+      return "consumables_utility"
+    end
+  end
+  return "consumables"
+end
+
+local function TrySetLastUsedForDrop(btn, moduleName, data)
+  if not data then return nil end
+  local targetModule = GetTargetModuleFromButton(btn)
+  if targetModule then
+    if moduleName and targetModule ~= moduleName then
+      return nil
+    end
+    BarSmith:SetLastUsedForModule(targetModule, data)
+    return targetModule
+  end
+  if moduleName then
+    BarSmith:SetLastUsedForModule(moduleName, data)
+    return moduleName
+  end
+  return nil
+end
+
+local function RecordManualDrop(btn, moduleName, data)
+  local usedModule = TrySetLastUsedForDrop(btn, moduleName, data)
+  if usedModule then
+    if BarSmith.MarkManualForAction then
+      BarSmith:MarkManualForAction(data)
+    end
+    if BarSmith.PushManualOrder then
+      BarSmith:PushManualOrder(usedModule, data)
+      if usedModule:match("^consumables_") then
+        BarSmith:PushManualOrder("consumables", data)
+      end
+    end
+  end
+  return usedModule ~= nil
+end
 local FLYOUT_SECURE_SHOW = [[
   local count = self:GetAttribute("bs_flyout_count") or 0
   if count <= 1 then return end
@@ -627,6 +697,8 @@ function BarFrame:HandleButtonPostClick(btn, button)
   if not btn or not btn.itemData then return end
   if btn.itemData.isPlaceholder then return end
 
+  local moduleName = btn.itemData.module or (btn.groupData and btn.groupData.module)
+
   if IsSettingsClick(button) then
     return
   end
@@ -652,6 +724,9 @@ function BarFrame:HandleButtonPostClick(btn, button)
     local isAuto = data.autoAdded
     if isAuto == nil then
       isAuto = BarSmith:IsAutoAdded(data)
+    end
+    if BarSmith.IsManualMarked and BarSmith:IsManualMarked(data) then
+      isAuto = false
     end
 
     if isAuto then
@@ -702,11 +777,23 @@ function BarFrame:HandleButtonPostClick(btn, button)
       end
     end
 
+    if BarSmith.IsManualMarked and BarSmith:IsManualMarked(data) then
+      BarSmith:ClearManualForAction(data)
+      if moduleName and BarSmith.RemoveManualOrderEntry then
+        BarSmith:RemoveManualOrderEntry(moduleName, data)
+      end
+      if moduleName and BarSmith.GetLastUsedForModule then
+        local lastKey = BarSmith:GetLastUsedForModule(moduleName)
+        if lastKey == BarSmith:GetActionIdentityKey(data) then
+          BarSmith:ClearLastUsedForModule(moduleName)
+        end
+      end
+    end
+
     BarSmith:RunAutoFill(true)
     return
   end
 
-  local moduleName = btn.itemData.module or (btn.groupData and btn.groupData.module)
   if moduleName then
     BarSmith:SetLastUsedForModule(moduleName, btn.itemData)
   end
@@ -721,6 +808,13 @@ function BarFrame:HandleReceiveDrag(btn)
     BarSmith:Print("Cannot add includes during combat.")
     ClearCursor()
     return
+  end
+
+  local didUpdate = false
+  local didLastUsed = false
+  local function runAutoFill()
+    didUpdate = true
+    BarSmith:RunAutoFill(true)
   end
 
   local cursorType, id, subType, spellID = GetCursorInfo()
@@ -747,14 +841,16 @@ function BarFrame:HandleReceiveDrag(btn)
       if target and target.type == "macro" then
         if not target.macroID then
           if macros:AssignMacroToSlot(target.slotIndex, id) then
-            BarSmith:RunAutoFill(true)
+            didLastUsed = RecordManualDrop(btn, "macros", { macroID = id }) or didLastUsed
+            runAutoFill()
           else
             BarSmith:Print("Could not assign macro to that slot.")
           end
         else
           local ok, err = macros:AddMacroToNextSlot(id)
           if ok then
-            BarSmith:RunAutoFill(true)
+            didLastUsed = RecordManualDrop(btn, "macros", { macroID = id }) or didLastUsed
+            runAutoFill()
           else
             BarSmith:Print(err or "Could not add macro.")
           end
@@ -762,7 +858,8 @@ function BarFrame:HandleReceiveDrag(btn)
       else
         local ok, err = macros:AddMacroToNextSlot(id)
         if ok then
-          BarSmith:RunAutoFill(true)
+          didLastUsed = RecordManualDrop(btn, "macros", { macroID = id }) or didLastUsed
+          runAutoFill()
         else
           BarSmith:Print(err or "Could not add macro.")
         end
@@ -773,7 +870,8 @@ function BarFrame:HandleReceiveDrag(btn)
     local toys = BarSmith:GetModule("Toys")
     local added = (toys and toys:AddExtraToy(id)) == true
     if added or removed then
-      BarSmith:RunAutoFill(true)
+      didLastUsed = RecordManualDrop(btn, "toys", { toyID = id }) or didLastUsed
+      runAutoFill()
     end
   elseif cursorType == "item" then
     if isToyItem(id) then
@@ -781,14 +879,19 @@ function BarFrame:HandleReceiveDrag(btn)
       local toys = BarSmith:GetModule("Toys")
       local added = (toys and toys:AddExtraToy(id)) == true
       if added or removed then
-        BarSmith:RunAutoFill(true)
+        didLastUsed = RecordManualDrop(btn, "toys", { toyID = id }) or didLastUsed
+        runAutoFill()
       end
     else
       local removed = BarSmith:RemoveFromExcludeForItemID(id)
       local con = BarSmith:GetModule("Consumables")
       local added = (con and con:AddExtraItem(id)) == true
       if added or removed then
-        BarSmith:RunAutoFill(true)
+        local moduleName = GetConsumableModuleName(id)
+        didLastUsed = RecordManualDrop(btn, moduleName, { itemID = id }) or didLastUsed
+        runAutoFill()
+      else
+        didLastUsed = RecordManualDrop(btn, nil, { itemID = id }) or didLastUsed
       end
     end
   elseif cursorType == "mount" then
@@ -797,16 +900,24 @@ function BarFrame:HandleReceiveDrag(btn)
     local mounts = BarSmith:GetModule("Mounts")
     local added = (mounts and mounts:AddExtraMount(id)) == true
     if added or removed then
-      BarSmith:RunAutoFill(true)
+      if spellID then
+        didLastUsed = RecordManualDrop(btn, "mounts", { spellID = spellID }) or didLastUsed
+      end
+      runAutoFill()
     end
   elseif cursorType == "spell" then
     local resolvedSpellID = spellID or id
     local removed = BarSmith:RemoveFromExcludeForSpellID(resolvedSpellID)
     local classSpells = BarSmith:GetModule("ClassSpells")
     local added = (classSpells and classSpells:AddCustomSpell(resolvedSpellID)) == true
-    if added or removed then
-      BarSmith:RunAutoFill(true)
+    local known = classSpells and classSpells.IsSpellKnown and classSpells:IsSpellKnown(resolvedSpellID)
+    if added or removed or known then
+      didLastUsed = RecordManualDrop(btn, "classSpells", { spellID = resolvedSpellID }) or didLastUsed
+      runAutoFill()
     end
+  end
+  if not didUpdate and didLastUsed then
+    BarSmith:RunAutoFill(true)
   end
   ClearCursor()
 end
