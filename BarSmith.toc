@@ -1,4 +1,4 @@
-## Interface: 120000
+## Interface: 120000, 120001
 ## Title: BarSmith |cff8a5cf6Midnight|r
 ## Notes: Automatically fills action bar slots with quest items, consumables, trinkets, professions, mounts, toys, hearthstones, and class spells.
 ## Author: jrosco
