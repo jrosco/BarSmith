@@ -46,6 +46,12 @@ local MENU_ENTRIES = {
     icon = "Interface\\Icons\\INV_Misc_Book_07",
   },
   {
+    key = "housing",
+    label = "Housing",
+    buttonNames = { "HousingMicroButton" },
+    icon = "Interface\\Icons\\INV_GarrisonBlueprint",
+  },
+  {
     key = "guild",
     label = "Guild",
     buttonNames = { "GuildMicroButton" },
@@ -92,6 +98,7 @@ local MICRO_BUTTON_NAMES = {
   "ProfessionsMicroButton",
   "AchievementMicroButton",
   "QuestLogMicroButton",
+  "HousingMicroButton",
   "GuildMicroButton",
   "LFDMicroButton",
   "LFGMicroButton",
