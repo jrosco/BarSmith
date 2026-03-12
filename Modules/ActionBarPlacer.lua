@@ -195,6 +195,16 @@ function Placer:PromoteLastUsedChild(moduleName, children)
     return false
   end
 
+  if moduleName == "systemMenu" then
+    local pinnedKey = BarSmith:GetPinnedForModule(moduleName)
+    if pinnedKey then
+      moveKeyToIndex(pinnedKey, 1)
+    else
+      moveKeyToIndex("name:Character", 1)
+    end
+    return
+  end
+
   local manualOrder = BarSmith.GetManualOrder and BarSmith:GetManualOrder(moduleName)
   if type(manualOrder) == "table" then
     local insertIndex = 1

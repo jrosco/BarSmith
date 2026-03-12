@@ -416,7 +416,7 @@ function mod:Init()
   -- Flyout direction
   do
     local variable = "BarSmith_FlyoutDirection"
-    local name = "Flyout Direction"
+    local name = "Global Flyout Direction"
     local tooltip = "Direction flyout buttons expand from the main button."
     local defaultValue = defaultsChar.flyoutDirection or "TOP"
     local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "string", name,
