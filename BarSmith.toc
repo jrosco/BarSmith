@@ -30,6 +30,7 @@ Modules\Mounts.lua
 Modules\Toys.lua
 Modules\Hearthstones.lua
 Modules\Macros.lua
+Modules\SystemMenu.lua
 Modules\BarFrameSettings.lua
 Modules\QuickBar.lua
 Modules\BarFrame.lua

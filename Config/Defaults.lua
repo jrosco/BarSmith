@@ -54,6 +54,7 @@ BarSmith.DEFAULTS = {
       toys         = false,
       hearthstones = true,
       macros       = false,
+      systemMenu   = false,
     },
 
     -- Priority order (lower = placed first, gets earlier slots)
@@ -67,6 +68,7 @@ BarSmith.DEFAULTS = {
       "toys",
       "classSpells",
       "macros",
+      "systemMenu",
     },
 
     -- Per-module remembered "last used" action identity.
@@ -142,6 +144,11 @@ BarSmith.DEFAULTS = {
     macros = {
       slotCount = 1,                 -- number of macro slots to create
       slots = {},                    -- slotIndex -> { macroID = X }
+    },
+
+    -- System menu settings
+    systemMenu = {
+      hideDefault = false,           -- hide Blizzard micro menu when enabled
     },
   },
 }

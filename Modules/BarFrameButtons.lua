@@ -364,6 +364,9 @@ function BarFrame:CreateFlyoutButtons(parentBtn)
         if not (button == "LeftButton" and IsControlKeyDown()) then
           local moduleName = b.itemData and b.itemData.module
           local pinned = moduleName and BarSmith:GetPinnedForModule(moduleName)
+          if b.itemData and b.itemData.noPromote then
+            return
+          end
           if not pinned or BarSmith:GetActionIdentityKey(b.itemData) == pinned then
             self:PromoteChildAsPrimary(b.parentButton, b.itemData)
           end
@@ -493,6 +496,7 @@ function BarFrame:ApplyButtonVisuals(btn, data)
     if btn.icon.SetAtlas then
       btn.icon:SetAtlas(nil)
     end
+    btn.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
     btn.count:SetText("")
     btn.overlayConfig = nil
     if btn.overlayIcon then
@@ -505,6 +509,12 @@ function BarFrame:ApplyButtonVisuals(btn, data)
     return
   end
 
+  if data.portraitUnit and SetPortraitTexture then
+    SetPortraitTexture(btn.icon, data.portraitUnit)
+    btn.icon:SetTexCoord(0, 1, 0, 1)
+    btn.icon:SetDesaturated(false)
+    btn.icon:SetVertexColor(1, 1, 1)
+  else
   local icon = data.icon
   if icon == 0 or icon == "" or icon == false then
     icon = nil
@@ -523,10 +533,12 @@ function BarFrame:ApplyButtonVisuals(btn, data)
 
   if iconAtlas and btn.icon.SetAtlas then
     btn.icon:SetAtlas(iconAtlas, true)
+    btn.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
     btn.icon:SetDesaturated(false)
     btn.icon:SetVertexColor(1, 1, 1)
   elseif icon then
     btn.icon:SetTexture(icon)
+    btn.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
     btn.icon:SetDesaturated(false)
     btn.icon:SetVertexColor(1, 1, 1)
   else
@@ -534,6 +546,8 @@ function BarFrame:ApplyButtonVisuals(btn, data)
     if btn.icon.SetAtlas then
       btn.icon:SetAtlas(nil)
     end
+    btn.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+  end
   end
 
   if data.count and data.count > 1 then
