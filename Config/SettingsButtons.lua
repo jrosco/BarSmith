@@ -19,3 +19,15 @@ function BarSmithSettingsButtonMixin:Init(initializer)
     end)
   end
 end
+
+BarSmithSettingsNoteMixin = {}
+
+function BarSmithSettingsNoteMixin:Init(initializer)
+  local data = initializer.data or {}
+  if self.Text and data.text then
+    self.Text:SetText(data.text)
+    self.Text:SetJustifyH("LEFT")
+    self.Text:SetJustifyV("TOP")
+    self.Text:SetWordWrap(true)
+  end
+end

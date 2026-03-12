@@ -454,7 +454,12 @@ function mod:Init()
   end
 
   ---------- QuickBar ----------
-  -- quickBarLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer("QuickBar"))
+  do
+    local initializer = Settings.CreateElementInitializer("BarSmithSettingsNoteTemplate", {
+      text = "QuickBar is a small, on-demand bar shown at your cursor via the keybind. Use it for temporary or situational items without changing the main bar.",
+    })
+    quickBarLayout:AddInitializer(initializer)
+  end
 
   -- Enable QuickBar
   do
@@ -596,6 +601,14 @@ function mod:Init()
 
   -- modulesLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Modules"))
 
+  do
+    local initializer = Settings.CreateElementInitializer("BarSmithSettingsNoteTemplate", {
+      text =
+      "Enable or disable entire modules of items with the checkboxes below. This will show or hide the module categories on the bar, and also prevent them from being auto-filled with items.\n\n",
+    })
+    modulesLayout:AddInitializer(initializer)
+  end
+
   for key, label in pairs(MODULE_LABELS) do
     local variable = "BarSmith_Mod_" .. key
     local defaultValue = true
@@ -631,6 +644,12 @@ function mod:Init()
 
   ---------- Module Split ----------
   modulesLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Consumables Module Split"))
+  do
+    local initializer = Settings.CreateElementInitializer("BarSmithSettingsNoteTemplate", {
+      text = "Split the main Consumables button into dedicated buttons. When enabled, matching items are moved out of the parent Consumables flyout.",
+    })
+    modulesLayout:AddInitializer(initializer)
+  end
 
   do
     local variable = "BarSmith_Con_Split_Potions"
@@ -708,6 +727,12 @@ function mod:Init()
   end
 
   modulesLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Module Flyout Direction Overrides"))
+  do
+    local initializer = Settings.CreateElementInitializer("BarSmithSettingsNoteTemplate", {
+      text = "Override flyout direction per module. Use Global to inherit the main flyout direction setting.",
+    })
+    modulesLayout:AddInitializer(initializer)
+  end
 
   for _, entry in ipairs(MODULE_FLYOUT_ORDER) do
     local variable = "BarSmith_ModFlyout_" .. entry.key
@@ -735,6 +760,12 @@ function mod:Init()
 
   ---------- Consumable Options ----------
   filtersLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Combined Consumables Module Filters"))
+  do
+    local initializer = Settings.CreateElementInitializer("BarSmithSettingsNoteTemplate", {
+      text = "Filters that affect the combined Consumables module (when split buttons are not used).",
+    })
+    filtersLayout:AddInitializer(initializer)
+  end
 
   do
     local variable = "BarSmith_Con_CurrentOnly"
@@ -821,6 +852,12 @@ function mod:Init()
   end
 
   filtersLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Consumables Split Module Filters"))
+  do
+    local initializer = Settings.CreateElementInitializer("BarSmithSettingsNoteTemplate", {
+      text = "Filters that apply only to split Consumables buttons.",
+    })
+    filtersLayout:AddInitializer(initializer)
+  end
 
   do
     local variable = "BarSmith_Con_SplitCur_Potions"
@@ -899,6 +936,12 @@ function mod:Init()
 
   ---------- Item Filters ----------
   filtersLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Item Filters"))
+  do
+    local initializer = Settings.CreateElementInitializer("BarSmithSettingsNoteTemplate", {
+      text = "General item rules that apply across modules unless overridden.",
+    })
+    filtersLayout:AddInitializer(initializer)
+  end
 
   do
     local variable = "BarSmith_Filter_BGOnly"
@@ -918,6 +961,12 @@ function mod:Init()
   ---------- Mount Options ----------
 
   mountLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Options"))
+  do
+    local initializer = Settings.CreateElementInitializer("BarSmithSettingsNoteTemplate", {
+      text = "Control how mounts are added to the Mounts module.",
+    })
+    mountLayout:AddInitializer(initializer)
+  end
 
   do
     local variable = "BarSmith_Mounts_Random"
