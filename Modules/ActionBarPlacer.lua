@@ -105,6 +105,9 @@ function Placer:GatherItems()
           if not BarSmith:IsExcluded(item) and BarSmith:ItemPassesFilters(item) then
             local key = BarSmith:GetActionIdentityKey(item)
             local isAuto = not BarSmith:IsManualItem(item)
+            if BarSmith.IsManualMarked and BarSmith:IsManualMarked(item) then
+              isAuto = false
+            end
             item.autoAdded = isAuto
             if key then
               if not seen[key] then
@@ -175,19 +178,41 @@ function Placer:PromoteLastUsedChild(moduleName, children)
     return
   end
 
-  local wantedKey = BarSmith:GetPinnedForModule(moduleName) or BarSmith:GetLastUsedForModule(moduleName)
-  if not wantedKey then
-    return
+  local function moveKeyToIndex(key, targetIndex)
+    if not key then return false end
+    for i, child in ipairs(children) do
+      if BarSmith:GetActionIdentityKey(child) == key then
+        if i ~= targetIndex then
+          table.remove(children, i)
+          table.insert(children, targetIndex, child)
+        end
+        return true
+      end
+    end
+    return false
   end
 
-  for i, child in ipairs(children) do
-    if BarSmith:GetActionIdentityKey(child) == wantedKey then
-      if i > 1 then
-        table.remove(children, i)
-        table.insert(children, 1, child)
+  local manualOrder = BarSmith.GetManualOrder and BarSmith:GetManualOrder(moduleName)
+  if type(manualOrder) == "table" then
+    local insertIndex = 1
+    for _, key in ipairs(manualOrder) do
+      if moveKeyToIndex(key, insertIndex) then
+        insertIndex = insertIndex + 1
       end
-      return
     end
+  end
+
+  local pinnedKey = BarSmith:GetPinnedForModule(moduleName)
+  local lastUsedKey = BarSmith:GetLastUsedForModule(moduleName)
+  if pinnedKey then
+    moveKeyToIndex(pinnedKey, 1)
+  elseif lastUsedKey then
+    moveKeyToIndex(lastUsedKey, 1)
+  end
+
+  -- If pinned is set, keep it first and move last-used to second (if different).
+  if pinnedKey and lastUsedKey and pinnedKey ~= lastUsedKey and #children > 1 then
+    moveKeyToIndex(lastUsedKey, 2)
   end
 end
 

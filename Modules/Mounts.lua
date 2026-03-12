@@ -53,6 +53,19 @@ function Mounts:GetItems()
   local prefs = BarSmith.chardb.mounts
   local includes = prefs.include or {}
 
+  local function getFlyoutMax()
+    local barFrame = BarSmith:GetModule("BarFrame")
+    local max = barFrame and barFrame.constants and barFrame.constants.MAX_FLYOUT_BUTTONS
+    if not max then
+      max = 12
+    end
+    return math.max(1, math.floor(max))
+  end
+
+  local function canAddMore()
+    return #items < getFlyoutMax()
+  end
+
   local function addMount(mountID, name, spellID, icon, isDragonriding)
     if not spellID then return end
     local macrotext = "/dismount [mounted]\n/cast " .. (name or "Mount")
@@ -76,6 +89,7 @@ function Mounts:GetItems()
 
   -- Always include includes first
   for mountID, enabled in pairs(includes) do
+    if not canAddMore() then break end
     if enabled then
       local name, spellID, icon, isActive, isUsable, sourceType,
       isFavorite, isFactionSpecific, faction, shouldHideOnChar,
@@ -92,6 +106,9 @@ function Mounts:GetItems()
 
   -- Option 1: Use "Summon Random Favorite Mount"
   if prefs.randomMount then
+    if not canAddMore() then
+      return items
+    end
     local spellID = self.RANDOM_FAVORITE_MOUNT
     BarSmith:Debug("Mounts: using Random Favorite Mount spellID=" .. tostring(spellID))
     if not seenSpellIDs[spellID] then
@@ -107,8 +124,32 @@ function Mounts:GetItems()
     BarSmith:Debug("Mounts: added Random Favorite Mount")
   end
 
+  if not canAddMore() then
+    return items
+  end
+
   -- Option 2: Place top favorite mounts (optional)
-  if prefs.topFavorites then
+  if prefs.allFavorites then
+    local mountIDs = C_MountJournal.GetMountIDs()
+    if not mountIDs then return items end
+    for _, mountID in ipairs(mountIDs) do
+      if not canAddMore() then break end
+      local name, spellID, icon, isActive, isUsable, sourceType,
+      isFavorite, isFactionSpecific, faction, shouldHideOnChar,
+      isCollected = C_MountJournal.GetMountInfoByID(mountID)
+
+      if isCollected and not shouldHideOnChar and isFavorite and spellID then
+        local _, _, _, _, mountTypeID = C_MountJournal.GetMountInfoExtraByID(mountID)
+        local isDragonriding = (mountTypeID == 402 or mountTypeID == 424)
+        if isDragonriding and not prefs.dragonriding then
+          -- skip
+        elseif not seenSpellIDs[spellID] then
+          addMount(mountID, name, spellID, icon, isDragonriding)
+          markSeen(spellID)
+        end
+      end
+    end
+  elseif prefs.topFavorites then
     local mountIDs = C_MountJournal.GetMountIDs()
     if not mountIDs then return items end
 
@@ -116,6 +157,7 @@ function Mounts:GetItems()
     local limit = 5
 
     for _, mountID in ipairs(mountIDs) do
+      if not canAddMore() then break end
       local name, spellID, icon, isActive, isUsable, sourceType,
       isFavorite, isFactionSpecific, faction, shouldHideOnChar,
       isCollected = C_MountJournal.GetMountInfoByID(mountID)

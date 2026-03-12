@@ -8,7 +8,7 @@
 
 local BarFrame = BarSmith:NewModule("BarFrame")
 
-local MAX_FLYOUT_BUTTONS = 12
+local DEFAULT_MAX_FLYOUT_BUTTONS = 12
 local VALID_FLYOUT_DIRECTIONS = {
   TOP = true,
   BOTTOM = true,
@@ -65,7 +65,7 @@ local TOOLTIP_SHORTCUT_COLOR = "|cffffffff"
 local TOOLTIP_NOTE_COLOR = "|cffb3b3b3"
 
 BarFrame.constants = {
-  MAX_FLYOUT_BUTTONS = MAX_FLYOUT_BUTTONS,
+  MAX_FLYOUT_BUTTONS = DEFAULT_MAX_FLYOUT_BUTTONS,
   VALID_FLYOUT_DIRECTIONS = VALID_FLYOUT_DIRECTIONS,
   DEFAULT_BUTTON_SIZE = DEFAULT_BUTTON_SIZE,
   BUTTON_PADDING = BUTTON_PADDING,
@@ -140,6 +140,8 @@ end
 
 function BarFrame:Init()
   if self.frame then return end
+
+  self:UpdateFlyoutMax()
 
   -- Main container frame (not secure, just a visual parent)
   self.frame = CreateFrame("Frame", "BarSmithBarFrame", UIParent, "BackdropTemplate")
@@ -252,6 +254,19 @@ function BarFrame:Init()
 
   -- Module keybind buttons (hidden, for key bindings)
   self:EnsureModuleButtons()
+end
+
+function BarFrame:GetFlyoutMax()
+  local value = tonumber(BarSmith.chardb and BarSmith.chardb.flyoutMax) or DEFAULT_MAX_FLYOUT_BUTTONS
+  return math.max(1, math.min(24, math.floor(value)))
+end
+
+function BarFrame:UpdateFlyoutMax()
+  local max = self:GetFlyoutMax()
+  self.constants.MAX_FLYOUT_BUTTONS = max
+  for _, btn in ipairs(self.buttons or {}) do
+    self:CreateFlyoutButtons(btn)
+  end
 end
 
 function BarFrame:GetMaxButtons()
@@ -469,6 +484,7 @@ function BarFrame:Rebuild()
   if not self.frame then
     self:Init()
   end
+  self:UpdateFlyoutMax()
 
   local maxButtons = self:GetMaxButtons()
   if self.lastMaxButtons and BarSmith.chardb and BarSmith.chardb.barColumns then

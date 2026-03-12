@@ -393,13 +393,19 @@ end
 function BarSmith:SetAutoAddedKeys(keys)
   if not self.chardb then return end
 
+  local prior = self.chardb.autoAdded or {}
   self.chardb.autoAdded = {}
+  for key, enabled in pairs(prior) do
+    if enabled == false then
+      self.chardb.autoAdded[key] = false
+    end
+  end
   if not keys then
     return
   end
 
   for key, enabled in pairs(keys) do
-    if enabled then
+    if enabled and self.chardb.autoAdded[key] ~= false then
       self.chardb.autoAdded[key] = true
     end
   end
@@ -412,6 +418,164 @@ function BarSmith:IsAutoAdded(data)
   local key = self:GetActionIdentityKey(data)
   if not key then return false end
   return self.chardb.autoAdded[key] == true
+end
+
+function BarSmith:IsManualMarked(data)
+  if not self.chardb or not self.chardb.autoAdded then
+    return false
+  end
+  local key = self:GetActionIdentityKey(data)
+  if not key then return false end
+  return self.chardb.autoAdded[key] == false
+end
+
+function BarSmith:ClearManualForAction(data)
+  if not self.chardb or not self.chardb.autoAdded then
+    return
+  end
+  local key = self:GetActionIdentityKey(data)
+  if not key then return end
+  if self.chardb.autoAdded[key] == false then
+    self.chardb.autoAdded[key] = nil
+  end
+end
+
+function BarSmith:MarkManualForAction(data)
+  if not self.chardb then return end
+  local key = self:GetActionIdentityKey(data)
+  if not key then return end
+  self.chardb.autoAdded = self.chardb.autoAdded or {}
+  self.chardb.autoAdded[key] = false
+end
+
+local DEFAULT_FLYOUT_MAX = 12
+
+local function GetFlyoutMax(self)
+  if self and self.GetModule then
+    local barFrame = self:GetModule("BarFrame")
+    if barFrame and barFrame.constants and barFrame.constants.MAX_FLYOUT_BUTTONS then
+      return barFrame.constants.MAX_FLYOUT_BUTTONS
+    end
+  end
+  return DEFAULT_FLYOUT_MAX
+end
+
+function BarSmith:PushManualOrder(moduleName, data)
+  if not self.chardb or not moduleName or not data then return end
+  local key = self:GetActionIdentityKey(data)
+  if not key then return end
+
+  self.chardb.manualOrderByModule = self.chardb.manualOrderByModule or {}
+  local list = self.chardb.manualOrderByModule[moduleName]
+  if type(list) ~= "table" then
+    list = {}
+    self.chardb.manualOrderByModule[moduleName] = list
+  end
+
+  for i = #list, 1, -1 do
+    if list[i] == key then
+      table.remove(list, i)
+    end
+  end
+  table.insert(list, 1, key)
+
+  local max = GetFlyoutMax(self)
+  while #list > max do
+    table.remove(list)
+  end
+end
+
+local CONSUMABLE_SPLIT_CATEGORY = {
+  consumables_potions = "potions",
+  consumables_flask = "flasks",
+  consumables_food = "food",
+  consumables_bandage = "bandages",
+  consumables_utility = "utilities",
+}
+
+local function GetConsumableCategoryForModule(moduleName)
+  return CONSUMABLE_SPLIT_CATEGORY[moduleName]
+end
+
+local function RemoveKeyFromList(list, key)
+  if type(list) ~= "table" or not key then
+    return false
+  end
+  local removed = false
+  for i = #list, 1, -1 do
+    if list[i] == key then
+      table.remove(list, i)
+      removed = true
+    end
+  end
+  return removed
+end
+
+local function ExtractItemIDFromKey(key)
+  if not key then return nil end
+  local itemID = key:match("^item:(%d+)$")
+  if itemID then
+    return tonumber(itemID)
+  end
+  return nil
+end
+
+function BarSmith:GetManualOrder(moduleName)
+  if not self.chardb or not self.chardb.manualOrderByModule then
+    return nil
+  end
+  local list = self.chardb.manualOrderByModule[moduleName]
+
+  local category = GetConsumableCategoryForModule(moduleName)
+  if category then
+    local base = self.chardb.manualOrderByModule["consumables"]
+    if type(base) == "table" then
+      local merged = {}
+      local seen = {}
+      if type(list) == "table" then
+        for _, key in ipairs(list) do
+          seen[key] = true
+          table.insert(merged, key)
+        end
+      end
+      local con = self:GetModule("Consumables")
+      if con and con.ClassifyExtraCategory then
+        for _, key in ipairs(base) do
+          if not seen[key] then
+            local itemID = ExtractItemIDFromKey(key)
+            if itemID and con:ClassifyExtraCategory(itemID) == category then
+              seen[key] = true
+              table.insert(merged, key)
+            end
+          end
+        end
+      end
+      return merged
+    end
+  end
+
+  return list
+end
+
+function BarSmith:RemoveManualOrderEntry(moduleName, data)
+  if not self.chardb or not self.chardb.manualOrderByModule then
+    return
+  end
+  if not moduleName or not data then return end
+  local key = self:GetActionIdentityKey(data)
+  if not key then return end
+  local list = self.chardb.manualOrderByModule[moduleName]
+  if type(list) == "table" and RemoveKeyFromList(list, key) and #list == 0 then
+    self.chardb.manualOrderByModule[moduleName] = nil
+  end
+
+  local category = GetConsumableCategoryForModule(moduleName)
+  if category then
+    local base = self.chardb.manualOrderByModule["consumables"]
+    if type(base) == "table" and RemoveKeyFromList(base, key) and #base == 0 then
+      self.chardb.manualOrderByModule["consumables"] = nil
+    end
+  end
 end
 
 function BarSmith:IsExcluded(data)
@@ -504,6 +668,13 @@ function BarSmith:GetLastUsedForModule(moduleName)
     return nil
   end
   return self.chardb.lastUsedByModule[moduleName]
+end
+
+function BarSmith:ClearLastUsedForModule(moduleName)
+  if not self.chardb or not moduleName or not self.chardb.lastUsedByModule then
+    return
+  end
+  self.chardb.lastUsedByModule[moduleName] = nil
 end
 
 function BarSmith:SetPinnedForModule(moduleName, data)
