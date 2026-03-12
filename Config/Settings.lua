@@ -48,7 +48,7 @@ local MODULE_LABELS = {
   toys         = "Toys",
   hearthstones = "Hearthstones",
   macros       = "Macros",
-  systemMenu   = "Micro Menu",
+  microMenu    = "Micro Menu",
 }
 
 local MODULE_FLYOUT_ORDER = {
@@ -66,7 +66,7 @@ local MODULE_FLYOUT_ORDER = {
   { key = "toys", label = "Toys" },
   { key = "classSpells", label = "Class Special Spells" },
   { key = "macros", label = "Macros" },
-  { key = "systemMenu", label = "Micro Menu" },
+  { key = "microMenu", label = "Micro Menu" },
 }
 
 function BarSmith:UpdateSettingsProxy(key, value)
@@ -102,8 +102,8 @@ function BarSmith:RefreshSettingsProxy()
   settingsProxy["BarSmith_Mounts_TopFavs"]    = BarSmith.chardb.mounts.topFavorites
   settingsProxy["BarSmith_Mounts_AllFavs"]    = BarSmith.chardb.mounts.allFavorites
   settingsProxy["BarSmith_Debug"]             = BarSmith.db and BarSmith.db.debug
-  settingsProxy["BarSmith_SysMenu_HideDefault"] = BarSmith.chardb.systemMenu
-    and BarSmith.chardb.systemMenu.hideDefault == true
+  settingsProxy["BarSmith_MicroMenu_HideDefault"] = BarSmith.chardb.microMenu
+    and BarSmith.chardb.microMenu.hideDefault == true
   settingsProxy["BarSmith_Con_Potions"]       = BarSmith.chardb.consumables.potions
   settingsProxy["BarSmith_Con_Flasks"]        = BarSmith.chardb.consumables.flasks
   settingsProxy["BarSmith_Con_Food"]          = BarSmith.chardb.consumables.food
@@ -607,10 +607,10 @@ function mod:Init()
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       BarSmith.chardb.modules[key] = val
       BarSmith:FireCallback("SETTINGS_CHANGED")
-      if key == "systemMenu" then
-        local systemMenu = BarSmith:GetModule("SystemMenu")
-        if systemMenu and systemMenu.UpdateDefaultMenuVisibility then
-          systemMenu:UpdateDefaultMenuVisibility()
+      if key == "microMenu" then
+        local microMenu = BarSmith:GetModule("MicroMenu")
+        if microMenu and microMenu.UpdateDefaultMenuVisibility then
+          microMenu:UpdateDefaultMenuVisibility()
         end
       end
       -- Allow toys to load and wait before trying to enable the module
@@ -979,19 +979,19 @@ function mod:Init()
   end
 
   do
-    local variable = "BarSmith_SysMenu_HideDefault"
+    local variable = "BarSmith_MicroMenu_HideDefault"
     local name = "Hide Default Micro Menu"
     local tooltip = "Hide the Blizzard micro menu when the Micro Menu module is enabled."
-    local defaultValue = defaultsChar.systemMenu and defaultsChar.systemMenu.hideDefault == true
+    local defaultValue = defaultsChar.microMenu and defaultsChar.microMenu.hideDefault == true
     local setting = Settings.RegisterAddOnSetting(advancedCategory, variable, variable, settingsProxy, "boolean", name,
       defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
-      BarSmith.chardb.systemMenu = BarSmith.chardb.systemMenu or {}
-      BarSmith.chardb.systemMenu.hideDefault = (val == true)
+      BarSmith.chardb.microMenu = BarSmith.chardb.microMenu or {}
+      BarSmith.chardb.microMenu.hideDefault = (val == true)
       settingsProxy[variable] = (val == true)
-      local systemMenu = BarSmith:GetModule("SystemMenu")
-      if systemMenu and systemMenu.UpdateDefaultMenuVisibility then
-        systemMenu:UpdateDefaultMenuVisibility()
+      local microMenu = BarSmith:GetModule("MicroMenu")
+      if microMenu and microMenu.UpdateDefaultMenuVisibility then
+        microMenu:UpdateDefaultMenuVisibility()
       end
     end)
     Settings.CreateCheckbox(advancedCategory, setting, tooltip)

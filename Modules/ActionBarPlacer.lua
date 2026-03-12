@@ -88,7 +88,7 @@ function Placer:GatherItems()
     toys         = function() return BarSmith:GetModule("Toys"):GetItems() end,
     hearthstones = function() return BarSmith:GetModule("Hearthstones"):GetItems() end,
     macros       = function() return BarSmith:GetModule("Macros"):GetItems() end,
-    systemMenu   = function() return BarSmith:GetModule("SystemMenu"):GetItems() end,
+    microMenu    = function() return BarSmith:GetModule("MicroMenu"):GetItems() end,
   }
 
   local function isEnabled(modName)
@@ -155,7 +155,7 @@ Placer.MODULE_LABELS = {
   toys         = "Toys",
   hearthstones = "Hearthstones",
   macros       = "Macros",
-  systemMenu   = "Micro Menu",
+  microMenu    = "Micro Menu",
 }
 
 Placer.MODULE_PLACEHOLDER_ICONS = {
@@ -173,7 +173,7 @@ Placer.MODULE_PLACEHOLDER_ICONS = {
   toys         = "Interface\\Icons\\INV_Misc_Toy_02",
   hearthstones = "Interface\\Icons\\INV_Misc_Rune_01",
   macros       = "Interface\\Icons\\INV_Misc_QuestionMark",
-  systemMenu   = "Interface\\Icons\\INV_Gizmo_Gear_01",
+  microMenu    = "Interface\\Icons\\INV_Gizmo_Gear_01",
 }
 
 function Placer:PromoteLastUsedChild(moduleName, children)
@@ -195,7 +195,7 @@ function Placer:PromoteLastUsedChild(moduleName, children)
     return false
   end
 
-  if moduleName == "systemMenu" then
+  if moduleName == "microMenu" then
     local pinnedKey = BarSmith:GetPinnedForModule(moduleName)
     if pinnedKey then
       moveKeyToIndex(pinnedKey, 1)

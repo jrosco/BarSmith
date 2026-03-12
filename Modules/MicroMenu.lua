@@ -3,9 +3,9 @@
 -- Micro menu buttons for the BarSmith bar
 ------------------------------------------------------------------------
 
-local SystemMenu = BarSmith:NewModule("SystemMenu")
+local MicroMenu = BarSmith:NewModule("MicroMenu")
 
-SystemMenu.DEFAULT_ICON = "Interface\\Icons\\INV_Gizmo_Gear_01"
+MicroMenu.DEFAULT_ICON = "Interface\\Icons\\INV_Gizmo_Gear_01"
 
 local MENU_ENTRIES = {
   {
@@ -150,14 +150,14 @@ local function CollectMicroMenuContainers()
   return frames
 end
 
-function SystemMenu:UpdateDefaultMenuVisibility()
+function MicroMenu:UpdateDefaultMenuVisibility()
   if not BarSmith.chardb or not BarSmith.chardb.modules then
     return
   end
 
-  local hide = BarSmith.chardb.systemMenu
-    and BarSmith.chardb.systemMenu.hideDefault == true
-    and BarSmith.chardb.modules.systemMenu == true
+  local hide = BarSmith.chardb.microMenu
+    and BarSmith.chardb.microMenu.hideDefault == true
+    and BarSmith.chardb.modules.microMenu == true
 
   if InCombatLockdown() then
     self._pendingVisibility = true
@@ -213,10 +213,10 @@ function SystemMenu:UpdateDefaultMenuVisibility()
   end
 end
 
-function SystemMenu:Init()
+function MicroMenu:Init()
   self:UpdateDefaultMenuVisibility()
   C_Timer.After(1, function()
-    SystemMenu:UpdateDefaultMenuVisibility()
+    MicroMenu:UpdateDefaultMenuVisibility()
   end)
 
   if not self._eventFrame then
@@ -227,29 +227,29 @@ function SystemMenu:Init()
       if event == "UNIT_PORTRAIT_UPDATE" and unit ~= "player" then
         return
       end
-      SystemMenu:RefreshPortraits()
+      MicroMenu:RefreshPortraits()
     end)
     self._eventFrame = f
   end
   self:RefreshPortraits()
 end
 
-function SystemMenu:GetItems()
+function MicroMenu:GetItems()
   local items = {}
 
-  if not BarSmith.chardb or not BarSmith.chardb.modules or not BarSmith.chardb.modules.systemMenu then
+  if not BarSmith.chardb or not BarSmith.chardb.modules or not BarSmith.chardb.modules.microMenu then
     return items
   end
 
   for _, entry in ipairs(MENU_ENTRIES) do
     local btn, buttonName = ResolveMicroButton(entry)
     if buttonName then
-      local icon, atlas = GetButtonIcon(btn, entry.icon or SystemMenu.DEFAULT_ICON)
+      local icon, atlas = GetButtonIcon(btn, entry.icon or MicroMenu.DEFAULT_ICON)
       local data = {
         name = entry.label,
         type = "macro",
         macrotext = "/click " .. buttonName,
-        icon = icon or SystemMenu.DEFAULT_ICON,
+        icon = icon or MicroMenu.DEFAULT_ICON,
         noPromote = true,
       }
       if entry.portraitUnit then
@@ -267,8 +267,8 @@ function SystemMenu:GetItems()
   return items
 end
 
-function SystemMenu:RefreshPortraits()
-  if not BarSmith.chardb or not BarSmith.chardb.modules or not BarSmith.chardb.modules.systemMenu then
+function MicroMenu:RefreshPortraits()
+  if not BarSmith.chardb or not BarSmith.chardb.modules or not BarSmith.chardb.modules.microMenu then
     return
   end
   local barFrame = BarSmith:GetModule("BarFrame")

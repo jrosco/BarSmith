@@ -66,7 +66,7 @@ function BarFrame:ShowButtonTooltip(btn, isFlyoutChild)
 
   GameTooltip:SetOwner(btn, "ANCHOR_RIGHT")
   local data = btn.itemData
-  local isMicroMenu = data.module == "systemMenu"
+  local isMicroMenu = data.module == "microMenu"
   local TYPE_INFO = {
     quest_item = { label = "Quest Item", color = { 0.85, 0.8, 0.35 } },
     potion = { label = "Potion", color = { 0.4, 0.9, 0.6 } },
