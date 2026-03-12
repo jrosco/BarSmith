@@ -11,9 +11,16 @@ function BarFrame:SetFlyoutItems(btn, children)
   btn.flyoutOpen = false
 
   local childCount = children and #children or 0
-  local max = C.MAX_FLYOUT_BUTTONS or 0
-  if max > 0 then
-    childCount = math.min(childCount, max)
+  local moduleKey = btn.groupData and btn.groupData.module
+  if moduleKey == "microMenu" then
+    if childCount > 0 then
+      self:CreateFlyoutButtons(btn, childCount)
+    end
+  else
+    local max = C.MAX_FLYOUT_BUTTONS or 0
+    if max > 0 then
+      childCount = math.min(childCount, max)
+    end
   end
   if not InCombatLockdown() then
     btn:SetAttribute("bs_flyout_count", childCount)

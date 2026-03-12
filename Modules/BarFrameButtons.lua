@@ -284,10 +284,10 @@ function BarFrame:CreateButton(index)
   return btn
 end
 
-function BarFrame:CreateFlyoutButtons(parentBtn)
+function BarFrame:CreateFlyoutButtons(parentBtn, desiredMax)
   local prefix = parentBtn:GetName() .. "Flyout"
   parentBtn.flyoutButtons = parentBtn.flyoutButtons or {}
-  local max = C.MAX_FLYOUT_BUTTONS or 0
+  local max = tonumber(desiredMax) or C.MAX_FLYOUT_BUTTONS or 0
   if #parentBtn.flyoutButtons > max then
     for i = max + 1, #parentBtn.flyoutButtons do
       local child = parentBtn.flyoutButtons[i]
