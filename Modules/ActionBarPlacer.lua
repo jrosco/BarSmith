@@ -180,9 +180,6 @@ function Placer:PromoteLastUsedChild(moduleName, children)
   if not moduleName or not children or #children <= 1 then
     return
   end
-  if moduleName == "systemMenu" then
-    return
-  end
 
   local function moveKeyToIndex(key, targetIndex)
     if not key then return false end
