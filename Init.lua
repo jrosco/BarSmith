@@ -243,6 +243,20 @@ BarSmith:RegisterEvent("TOYS_UPDATED", function(self)
   end)
 end)
 
+-- Re-fill when mount favorites change
+BarSmith:RegisterEvent("MOUNT_JOURNAL_SEARCH_UPDATED", function(self)
+  if not self.chardb or not self.chardb.enabled or not self.chardb.autoFill then
+    return
+  end
+  if self._mountTimer then return end
+  self._mountTimer = C_Timer.After(1, function()
+    self._mountTimer = nil
+    if not InCombatLockdown() then
+      BarSmith:RunAutoFill()
+    end
+  end)
+end)
+
 -- Fill after combat ends if a fill was pending
 BarSmith:RegisterEvent("PLAYER_REGEN_ENABLED", function(self)
   if self.pendingFill then

@@ -81,6 +81,7 @@ function BarSmith:RefreshSettingsProxy()
   settingsProxy["BarSmith_Masque"]            = (BarSmith.chardb.masqueEnabled == true)
   settingsProxy["BarSmith_Mounts_Random"]     = BarSmith.chardb.mounts.randomMount
   settingsProxy["BarSmith_Mounts_TopFavs"]    = BarSmith.chardb.mounts.topFavorites
+  settingsProxy["BarSmith_Mounts_AllFavs"]    = BarSmith.chardb.mounts.allFavorites
   settingsProxy["BarSmith_Debug"]             = BarSmith.db and BarSmith.db.debug
   settingsProxy["BarSmith_Con_Potions"]       = BarSmith.chardb.consumables.potions
   settingsProxy["BarSmith_Con_Flasks"]        = BarSmith.chardb.consumables.flasks
@@ -865,6 +866,20 @@ function mod:Init()
     defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       BarSmith.chardb.mounts.topFavorites = val
+      BarSmith:FireCallback("SETTINGS_CHANGED")
+    end)
+    Settings.CreateCheckbox(mountCategory, setting, tooltip)
+  end
+
+  do
+    local variable = "BarSmith_Mounts_AllFavs"
+    local name = "Add All Favorite Mounts"
+    local tooltip = "Include all favorited mounts (overrides Top 5). Respects the flyout button cap."
+    local defaultValue = defaultsChar.mounts and defaultsChar.mounts.allFavorites == true
+    local setting = Settings.RegisterAddOnSetting(mountCategory, variable, variable, settingsProxy, "boolean", name,
+    defaultValue)
+    Settings.SetOnValueChangedCallback(variable, function(_, _, val)
+      BarSmith.chardb.mounts.allFavorites = val
       BarSmith:FireCallback("SETTINGS_CHANGED")
     end)
     Settings.CreateCheckbox(mountCategory, setting, tooltip)

@@ -122,6 +122,7 @@ BarSmith.DEFAULTS = {
       dragonriding = true,         -- include dragonriding / skyriding
       include      = {},           -- mountID -> true (always include)
       topFavorites = false,        -- add top favorite mounts
+      allFavorites = false,        -- add all favorite mounts
     },
 
     -- Toy settings
