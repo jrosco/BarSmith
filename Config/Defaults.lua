@@ -25,6 +25,7 @@ BarSmith.DEFAULTS = {
     barAlpha = 1,                     -- bar frame alpha (0.1 - 1.0)
     flyoutMax = 12,                   -- max buttons per flyout (1-24)
     flyoutDirection = "TOP",          -- TOP, BOTTOM, LEFT, RIGHT
+    flyoutDirectionByModule = {},     -- moduleKey -> TOP/BOTTOM/LEFT/RIGHT (nil = global)
     tooltipModifier = "NONE",         -- NONE, ALT, SHIFT, CTRL
     barPosition = nil,                -- saved {point, relPoint, x, y}
     hideEmptyModules = true,          -- hide placeholder buttons for enabled but empty modules
@@ -53,6 +54,7 @@ BarSmith.DEFAULTS = {
       toys         = false,
       hearthstones = true,
       macros       = false,
+      systemMenu   = false,
     },
 
     -- Priority order (lower = placed first, gets earlier slots)
@@ -66,6 +68,7 @@ BarSmith.DEFAULTS = {
       "toys",
       "classSpells",
       "macros",
+      "systemMenu",
     },
 
     -- Per-module remembered "last used" action identity.
@@ -141,6 +144,11 @@ BarSmith.DEFAULTS = {
     macros = {
       slotCount = 1,                 -- number of macro slots to create
       slots = {},                    -- slotIndex -> { macroID = X }
+    },
+
+    -- System menu settings
+    systemMenu = {
+      hideDefault = false,           -- hide Blizzard micro menu when enabled
     },
   },
 }

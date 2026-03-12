@@ -174,6 +174,11 @@ BarSmith:RegisterEvent("ADDON_LOADED", function(self, event, addonName)
     minimapMod:Init()
   end
 
+  local systemMenu = self:GetModule("SystemMenu")
+  if systemMenu and systemMenu.Init then
+    systemMenu:Init()
+  end
+
   self:UnregisterEvent("ADDON_LOADED")
   self:Print("v" .. self.version .. " loaded. Type |cff00ccff/bs|r for commands.")
 end)

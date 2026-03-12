@@ -48,6 +48,25 @@ local MODULE_LABELS = {
   toys         = "Toys",
   hearthstones = "Hearthstones",
   macros       = "Macros",
+  systemMenu   = "System Menu",
+}
+
+local MODULE_FLYOUT_ORDER = {
+  { key = "questItems", label = "Quest Items" },
+  { key = "hearthstones", label = "Hearthstones" },
+  { key = "consumables", label = "Consumables (All)" },
+  { key = "consumables_potions", label = "Consumables: Potions" },
+  { key = "consumables_flask", label = "Consumables: Flasks / Elixirs" },
+  { key = "consumables_food", label = "Consumables: Food / Drink" },
+  { key = "consumables_bandage", label = "Consumables: Bandages" },
+  { key = "consumables_utility", label = "Consumables: Utilities" },
+  { key = "trinkets", label = "Trinkets" },
+  { key = "professions", label = "Professions" },
+  { key = "mounts", label = "Mounts" },
+  { key = "toys", label = "Toys" },
+  { key = "classSpells", label = "Class Special Spells" },
+  { key = "macros", label = "Macros" },
+  { key = "systemMenu", label = "System Menu" },
 }
 
 function BarSmith:UpdateSettingsProxy(key, value)
@@ -83,6 +102,8 @@ function BarSmith:RefreshSettingsProxy()
   settingsProxy["BarSmith_Mounts_TopFavs"]    = BarSmith.chardb.mounts.topFavorites
   settingsProxy["BarSmith_Mounts_AllFavs"]    = BarSmith.chardb.mounts.allFavorites
   settingsProxy["BarSmith_Debug"]             = BarSmith.db and BarSmith.db.debug
+  settingsProxy["BarSmith_SysMenu_HideDefault"] = BarSmith.chardb.systemMenu
+    and BarSmith.chardb.systemMenu.hideDefault == true
   settingsProxy["BarSmith_Con_Potions"]       = BarSmith.chardb.consumables.potions
   settingsProxy["BarSmith_Con_Flasks"]        = BarSmith.chardb.consumables.flasks
   settingsProxy["BarSmith_Con_Food"]          = BarSmith.chardb.consumables.food
@@ -105,6 +126,11 @@ function BarSmith:RefreshSettingsProxy()
     settingsProxy["BarSmith_Mod_" .. key] = BarSmith.chardb.modules[key]
   end
 
+  local overrides = BarSmith.chardb.flyoutDirectionByModule or {}
+  for _, entry in ipairs(MODULE_FLYOUT_ORDER) do
+    settingsProxy["BarSmith_ModFlyout_" .. entry.key] = overrides[entry.key] or "GLOBAL"
+  end
+
   BarSmith:Debug("Settings proxy refreshed.")
 end
 
@@ -115,6 +141,27 @@ local function BuildDirectionDropdownOptions()
   container:Add("LEFT", "Left")
   container:Add("RIGHT", "Right")
   return container:GetData()
+end
+
+local function BuildModuleDirectionDropdownOptions()
+  local container = Settings.CreateControlTextContainer()
+  container:Add("GLOBAL", "Use Global")
+  container:Add("TOP", "Top")
+  container:Add("BOTTOM", "Bottom")
+  container:Add("LEFT", "Left")
+  container:Add("RIGHT", "Right")
+  return container:GetData()
+end
+
+local function NormalizeFlyoutDirection(value, allowGlobal)
+  local dir = string.upper(tostring(value or ""))
+  if allowGlobal and dir == "GLOBAL" then
+    return "GLOBAL"
+  end
+  if dir ~= "TOP" and dir ~= "BOTTOM" and dir ~= "LEFT" and dir ~= "RIGHT" then
+    return allowGlobal and "GLOBAL" or "TOP"
+  end
+  return dir
 end
 
 local function BuildTooltipModifierOptions()
@@ -375,10 +422,7 @@ function mod:Init()
     local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "string", name,
     defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
-      local direction = string.upper(tostring(val or "TOP"))
-      if direction ~= "TOP" and direction ~= "BOTTOM" and direction ~= "LEFT" and direction ~= "RIGHT" then
-        direction = "TOP"
-      end
+      local direction = NormalizeFlyoutDirection(val, false)
       BarSmith.chardb.flyoutDirection = direction
       settingsProxy[variable] = direction
 
@@ -563,6 +607,12 @@ function mod:Init()
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       BarSmith.chardb.modules[key] = val
       BarSmith:FireCallback("SETTINGS_CHANGED")
+      if key == "systemMenu" then
+        local systemMenu = BarSmith:GetModule("SystemMenu")
+        if systemMenu and systemMenu.UpdateDefaultMenuVisibility then
+          systemMenu:UpdateDefaultMenuVisibility()
+        end
+      end
       -- Allow toys to load and wait before trying to enable the module
       if key == "toys" and val == true then
         C_Timer.After(1.5, function()
@@ -655,6 +705,32 @@ function mod:Init()
       BarSmith:FireCallback("SETTINGS_CHANGED")
     end)
     Settings.CreateCheckbox(modulesCategory, setting, tooltip)
+  end
+
+  modulesLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Module Flyout Direction Overrides"))
+
+  for _, entry in ipairs(MODULE_FLYOUT_ORDER) do
+    local variable = "BarSmith_ModFlyout_" .. entry.key
+    local name = entry.label .. " Flyout Direction"
+    local tooltip = "Override flyout direction for the " .. entry.label .. " button. Use Global to inherit the main setting."
+    local defaultValue = "GLOBAL"
+    local setting = Settings.RegisterAddOnSetting(modulesCategory, variable, variable, settingsProxy, "string", name,
+      defaultValue)
+    Settings.SetOnValueChangedCallback(variable, function(_, _, val)
+      local direction = NormalizeFlyoutDirection(val, true)
+      BarSmith.chardb.flyoutDirectionByModule = BarSmith.chardb.flyoutDirectionByModule or {}
+      if direction == "GLOBAL" then
+        BarSmith.chardb.flyoutDirectionByModule[entry.key] = nil
+      else
+        BarSmith.chardb.flyoutDirectionByModule[entry.key] = direction
+      end
+      settingsProxy[variable] = direction
+      local barFrame = BarSmith:GetModule("BarFrame")
+      if barFrame then
+        barFrame:HideAllFlyouts()
+      end
+    end)
+    Settings.CreateDropdown(modulesCategory, setting, BuildModuleDirectionDropdownOptions, tooltip)
   end
 
   ---------- Consumable Options ----------
@@ -898,6 +974,25 @@ function mod:Init()
     defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       BarSmith.chardb.autoFill = val
+    end)
+    Settings.CreateCheckbox(advancedCategory, setting, tooltip)
+  end
+
+  do
+    local variable = "BarSmith_SysMenu_HideDefault"
+    local name = "Hide Default System Menu"
+    local tooltip = "Hide the Blizzard micro menu when the System Menu module is enabled."
+    local defaultValue = defaultsChar.systemMenu and defaultsChar.systemMenu.hideDefault == true
+    local setting = Settings.RegisterAddOnSetting(advancedCategory, variable, variable, settingsProxy, "boolean", name,
+      defaultValue)
+    Settings.SetOnValueChangedCallback(variable, function(_, _, val)
+      BarSmith.chardb.systemMenu = BarSmith.chardb.systemMenu or {}
+      BarSmith.chardb.systemMenu.hideDefault = (val == true)
+      settingsProxy[variable] = (val == true)
+      local systemMenu = BarSmith:GetModule("SystemMenu")
+      if systemMenu and systemMenu.UpdateDefaultMenuVisibility then
+        systemMenu:UpdateDefaultMenuVisibility()
+      end
     end)
     Settings.CreateCheckbox(advancedCategory, setting, tooltip)
   end

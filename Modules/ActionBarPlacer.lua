@@ -88,6 +88,7 @@ function Placer:GatherItems()
     toys         = function() return BarSmith:GetModule("Toys"):GetItems() end,
     hearthstones = function() return BarSmith:GetModule("Hearthstones"):GetItems() end,
     macros       = function() return BarSmith:GetModule("Macros"):GetItems() end,
+    systemMenu   = function() return BarSmith:GetModule("SystemMenu"):GetItems() end,
   }
 
   local function isEnabled(modName)
@@ -154,6 +155,7 @@ Placer.MODULE_LABELS = {
   toys         = "Toys",
   hearthstones = "Hearthstones",
   macros       = "Macros",
+  systemMenu   = "System Menu",
 }
 
 Placer.MODULE_PLACEHOLDER_ICONS = {
@@ -171,10 +173,14 @@ Placer.MODULE_PLACEHOLDER_ICONS = {
   toys         = "Interface\\Icons\\INV_Misc_Toy_02",
   hearthstones = "Interface\\Icons\\INV_Misc_Rune_01",
   macros       = "Interface\\Icons\\INV_Misc_QuestionMark",
+  systemMenu   = "Interface\\Icons\\INV_Gizmo_Gear_01",
 }
 
 function Placer:PromoteLastUsedChild(moduleName, children)
   if not moduleName or not children or #children <= 1 then
+    return
+  end
+  if moduleName == "systemMenu" then
     return
   end
 
