@@ -6,6 +6,19 @@
 local BarFrame = BarSmith:GetModule("BarFrame")
 local C = BarFrame.constants
 
+function BarFrame:ApplyCooldownVisuals(cooldown)
+  if not cooldown then return end
+  local visuals = (self.constants and self.constants.COOLDOWN_VISUALS) or C.COOLDOWN_VISUALS
+  if not visuals then return end
+  if visuals.bling == false then
+    if cooldown.SetDrawBling then cooldown:SetDrawBling(false) end
+    if cooldown.SetBlingTexture then cooldown:SetBlingTexture("") end
+    if cooldown.Bling then
+      cooldown.Bling:Hide()
+    end
+  end
+end
+
 local function IsSettingsClick(button)
   return button == "RightButton" and IsShiftKeyDown() and not IsControlKeyDown() and not IsAltKeyDown()
 end
@@ -171,6 +184,7 @@ function BarFrame:CreateButton(index)
   -- Cooldown frame (reuse from ActionButtonTemplate if available)
   btn.cooldown = btn.cooldown or CreateFrame("Cooldown", btnName .. "Cooldown", btn, "CooldownFrameTemplate")
   btn.cooldown:SetAllPoints()
+  self:ApplyCooldownVisuals(btn.cooldown)
 
   -- Count text (stack count)
   btn.count = btn.count or btn:CreateFontString(btnName .. "Count", "OVERLAY", "NumberFontNormalSmallGray")
@@ -304,6 +318,7 @@ function BarFrame:CreateFlyoutButtons(parentBtn)
 
       child.cooldown = child.cooldown or CreateFrame("Cooldown", prefix .. i .. "Cooldown", child, "CooldownFrameTemplate")
       child.cooldown:SetAllPoints()
+      self:ApplyCooldownVisuals(child.cooldown)
 
       child.count = child.count or child:CreateFontString(prefix .. i .. "Count", "OVERLAY", "NumberFontNormalSmallGray")
       child.count:SetPoint("BOTTOMLEFT", 2, 2)

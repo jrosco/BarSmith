@@ -28,6 +28,13 @@ local PREVIEW_ICONS = {
   "Interface\\Icons\\INV_Misc_Map_01",
 }
 
+local function ApplyCooldownVisuals(cooldown)
+  local barFrame = BarSmith:GetModule("BarFrame")
+  if barFrame and barFrame.ApplyCooldownVisuals then
+    barFrame:ApplyCooldownVisuals(cooldown)
+  end
+end
+
 local QUICKBAR_SECURE_SHOW = [[
   local bar = control and control:GetFrameRef("bs_quickbar")
   if not bar then return end
@@ -276,8 +283,10 @@ function QuickBar:UpdateCooldowns()
 
     if btn.cooldown and durationObject then
       btn.cooldown:SetCooldownFromDurationObject(durationObject)
+      ApplyCooldownVisuals(btn.cooldown)
     elseif btn.cooldown and duration and duration > 0 then
       CooldownFrame_Set(btn.cooldown, start, duration, enable)
+      ApplyCooldownVisuals(btn.cooldown)
     elseif btn.cooldown then
       btn.cooldown:Clear()
     end
@@ -438,6 +447,7 @@ function QuickBar:CreateButton(index)
 
   btn.cooldown = btn.cooldown or CreateFrame("Cooldown", btnName .. "Cooldown", btn, "CooldownFrameTemplate")
   btn.cooldown:SetAllPoints()
+  ApplyCooldownVisuals(btn.cooldown)
 
   btn.count = btn.count or btn:CreateFontString(btnName .. "Count", "OVERLAY", "NumberFontNormalSmallGray")
   btn.count:SetPoint("BOTTOMRIGHT", -2, 2)

@@ -44,8 +44,14 @@ function BarFrame:UpdateCooldowns()
 
     if btn.cooldown and durationObject then
       btn.cooldown:SetCooldownFromDurationObject(durationObject)
+      if BarFrame.ApplyCooldownVisuals then
+        BarFrame:ApplyCooldownVisuals(btn.cooldown)
+      end
     elseif btn.cooldown and duration and duration > 0 then
       CooldownFrame_Set(btn.cooldown, start, duration, enable)
+      if BarFrame.ApplyCooldownVisuals then
+        BarFrame:ApplyCooldownVisuals(btn.cooldown)
+      end
     elseif btn.cooldown then
       btn.cooldown:Clear()
     end
