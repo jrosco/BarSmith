@@ -30,6 +30,7 @@ local MODULE_LABELS = {
   toys         = "Toys",
   hearthstones = "Hearthstones",
   macros       = "Macros",
+  systemMenu   = "Micro Menu",
 }
 
 local FLYOUT_DIRECTIONS = { "GLOBAL", "TOP", "RIGHT", "BOTTOM", "LEFT" }

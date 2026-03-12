@@ -1,6 +1,6 @@
 ------------------------------------------------------------------------
--- BarSmith: Modules/SystemMenu.lua
--- System menu (micro menu) buttons for the BarSmith bar
+-- BarSmith: Modules/MicroMenu.lua
+-- Micro menu buttons for the BarSmith bar
 ------------------------------------------------------------------------
 
 local SystemMenu = BarSmith:NewModule("SystemMenu")
@@ -263,7 +263,7 @@ function SystemMenu:GetItems()
     end
   end
 
-  BarSmith:Debug("System menu entries: " .. #items)
+  BarSmith:Debug("Micro menu entries: " .. #items)
   return items
 end
 

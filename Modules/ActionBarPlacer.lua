@@ -155,7 +155,7 @@ Placer.MODULE_LABELS = {
   toys         = "Toys",
   hearthstones = "Hearthstones",
   macros       = "Macros",
-  systemMenu   = "System Menu",
+  systemMenu   = "Micro Menu",
 }
 
 Placer.MODULE_PLACEHOLDER_ICONS = {

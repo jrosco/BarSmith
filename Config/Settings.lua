@@ -48,7 +48,7 @@ local MODULE_LABELS = {
   toys         = "Toys",
   hearthstones = "Hearthstones",
   macros       = "Macros",
-  systemMenu   = "System Menu",
+  systemMenu   = "Micro Menu",
 }
 
 local MODULE_FLYOUT_ORDER = {
@@ -66,7 +66,7 @@ local MODULE_FLYOUT_ORDER = {
   { key = "toys", label = "Toys" },
   { key = "classSpells", label = "Class Special Spells" },
   { key = "macros", label = "Macros" },
-  { key = "systemMenu", label = "System Menu" },
+  { key = "systemMenu", label = "Micro Menu" },
 }
 
 function BarSmith:UpdateSettingsProxy(key, value)
@@ -980,8 +980,8 @@ function mod:Init()
 
   do
     local variable = "BarSmith_SysMenu_HideDefault"
-    local name = "Hide Default System Menu"
-    local tooltip = "Hide the Blizzard micro menu when the System Menu module is enabled."
+    local name = "Hide Default Micro Menu"
+    local tooltip = "Hide the Blizzard micro menu when the Micro Menu module is enabled."
     local defaultValue = defaultsChar.systemMenu and defaultsChar.systemMenu.hideDefault == true
     local setting = Settings.RegisterAddOnSetting(advancedCategory, variable, variable, settingsProxy, "boolean", name,
       defaultValue)
