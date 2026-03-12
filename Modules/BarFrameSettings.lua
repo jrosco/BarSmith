@@ -13,6 +13,8 @@ local INCLUDE_EXCLUDE_BUTTON_WIDTH = 88
 local INCLUDE_EXCLUDE_HEADER_HEIGHT = 34
 local INCLUDE_EXCLUDE_FOOTER_HEIGHT = 28
 local INCLUDE_EXCLUDE_FOOTER_SPACING = 6
+local INCLUDE_EXCLUDE_FLYOUT_HEIGHT = 20
+local INCLUDE_EXCLUDE_FLYOUT_SPACING = 6
 local MODULE_LABELS = {
   questItems   = "Quest Items",
   consumables  = "Consumables",
@@ -29,6 +31,36 @@ local MODULE_LABELS = {
   hearthstones = "Hearthstones",
   macros       = "Macros",
 }
+
+local FLYOUT_DIRECTIONS = { "GLOBAL", "TOP", "RIGHT", "BOTTOM", "LEFT" }
+local FLYOUT_DIRECTION_LABELS = {
+  GLOBAL = "Global",
+  TOP = "Top",
+  RIGHT = "Right",
+  BOTTOM = "Bottom",
+  LEFT = "Left",
+}
+
+local function NormalizeFlyoutDirection(value)
+  local dir = string.upper(tostring(value or ""))
+  if dir == "GLOBAL" then
+    return "GLOBAL"
+  end
+  if dir ~= "TOP" and dir ~= "BOTTOM" and dir ~= "LEFT" and dir ~= "RIGHT" then
+    return "GLOBAL"
+  end
+  return dir
+end
+
+local function GetNextFlyoutDirection(current)
+  local normalized = NormalizeFlyoutDirection(current)
+  for i, dir in ipairs(FLYOUT_DIRECTIONS) do
+    if dir == normalized then
+      return FLYOUT_DIRECTIONS[(i % #FLYOUT_DIRECTIONS) + 1]
+    end
+  end
+  return "GLOBAL"
+end
 
 local function SortMenuEntriesByText(entries)
   table.sort(entries, function(a, b)
@@ -653,6 +685,53 @@ function BarFrameSettings:CreateIncludeExcludeFrame()
   frame.close = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
   frame.close:SetPoint("TOPRIGHT", -6, -6)
 
+  frame.flyoutDirButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+  frame.flyoutDirButton:SetSize(INCLUDE_EXCLUDE_FRAME_WIDTH - 12, INCLUDE_EXCLUDE_FLYOUT_HEIGHT)
+  frame.flyoutDirButton:SetPoint("BOTTOMLEFT", 6, INCLUDE_EXCLUDE_FOOTER_HEIGHT + INCLUDE_EXCLUDE_FLYOUT_SPACING)
+  frame.flyoutDirButton:SetPoint("BOTTOMRIGHT", -6, INCLUDE_EXCLUDE_FOOTER_HEIGHT + INCLUDE_EXCLUDE_FLYOUT_SPACING)
+  frame.flyoutDirButton:SetText("Flyout: Global")
+  frame.flyoutDirButton:SetScript("OnClick", function()
+    local moduleKey = frame.moduleKey
+    if frame.showAll or not moduleKey then
+      return
+    end
+    local overrides = BarSmith.chardb.flyoutDirectionByModule or {}
+    local current = overrides[moduleKey] or "GLOBAL"
+    local nextDir = GetNextFlyoutDirection(current)
+    BarSmith.chardb.flyoutDirectionByModule = overrides
+    if nextDir == "GLOBAL" then
+      overrides[moduleKey] = nil
+    else
+      overrides[moduleKey] = nextDir
+    end
+    if BarSmith.UpdateSettingsProxy then
+      BarSmith:UpdateSettingsProxy("BarSmith_ModFlyout_" .. moduleKey, nextDir)
+    end
+    local barFrame = BarSmith:GetModule("BarFrame")
+    if barFrame and barFrame.HideAllFlyouts then
+      barFrame:HideAllFlyouts()
+    end
+    BarFrameSettings:UpdateIncludeExcludeFrame()
+  end)
+  frame.flyoutDirButton:SetScript("OnEnter", function(btn)
+    PrepareTooltip(btn, frame)
+    local moduleKey = frame.moduleKey
+    if frame.showAll or not moduleKey then
+      GameTooltip:SetText("Flyout direction (select a module)", 1, 1, 1)
+      GameTooltip:Show()
+      return
+    end
+    local overrides = BarSmith.chardb.flyoutDirectionByModule or {}
+    local current = NormalizeFlyoutDirection(overrides[moduleKey] or "GLOBAL")
+    local global = NormalizeFlyoutDirection(BarSmith.chardb.flyoutDirection or "TOP")
+    GameTooltip:SetText("Flyout direction: " .. (FLYOUT_DIRECTION_LABELS[current] or current), 1, 1, 1)
+    GameTooltip:AddLine("Click to cycle. Global: " .. (FLYOUT_DIRECTION_LABELS[global] or global), 0.8, 0.8, 0.8)
+    GameTooltip:Show()
+  end)
+  frame.flyoutDirButton:SetScript("OnLeave", function()
+    GameTooltip:Hide()
+  end)
+
   frame.footer = CreateFrame("Frame", nil, frame)
   frame.footer:SetPoint("BOTTOMLEFT", 6, 6)
   frame.footer:SetPoint("BOTTOMRIGHT", -6, 6)
@@ -818,7 +897,8 @@ function BarFrameSettings:CreateIncludeExcludeFrame()
 
   local scrollFrame = CreateFrame("ScrollFrame", nil, frame, "UIPanelScrollFrameTemplate")
   scrollFrame:SetPoint("TOPLEFT", 8, -(INCLUDE_EXCLUDE_HEADER_HEIGHT + 14))
-  scrollFrame:SetPoint("BOTTOMRIGHT", -28, INCLUDE_EXCLUDE_FOOTER_HEIGHT + 12)
+  scrollFrame:SetPoint("BOTTOMRIGHT", -28,
+    INCLUDE_EXCLUDE_FOOTER_HEIGHT + INCLUDE_EXCLUDE_FLYOUT_SPACING + INCLUDE_EXCLUDE_FLYOUT_HEIGHT + 12)
 
   local content = CreateFrame("Frame", nil, scrollFrame)
   content:SetSize(1, 1)
@@ -850,6 +930,21 @@ function BarFrameSettings:UpdateIncludeExcludeFrame()
     frame.showAllCheck:SetChecked(frame.showAll == true)
   end
   frame.lockButton:SetText(BarSmith.chardb.barLocked and "Unlock" or "Lock")
+  if frame.flyoutDirButton then
+    local flyoutKey = nil
+    if not frame.showAll then
+      flyoutKey = frame.moduleKey
+    end
+    if not flyoutKey then
+      frame.flyoutDirButton:SetText("Flyout: Global")
+      frame.flyoutDirButton:Disable()
+    else
+      local overrides = BarSmith.chardb.flyoutDirectionByModule or {}
+      local current = NormalizeFlyoutDirection(overrides[flyoutKey] or "GLOBAL")
+      frame.flyoutDirButton:SetText("Flyout: " .. (FLYOUT_DIRECTION_LABELS[current] or current))
+      frame.flyoutDirButton:Enable()
+    end
+  end
   local rows = self:BuildIncludeExcludeList(moduleKey)
   local content = frame.content
 
