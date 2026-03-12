@@ -65,6 +65,7 @@ function BarSmith:RefreshSettingsProxy()
   settingsProxy["BarSmith_Columns"]           = BarSmith.chardb.barColumns
   settingsProxy["BarSmith_IconSize"]          = BarSmith.chardb.barIconSize or 36
   settingsProxy["BarSmith_Alpha"]             = BarSmith.chardb.barAlpha or 1
+  settingsProxy["BarSmith_FlyoutMax"]         = BarSmith.chardb.flyoutMax or 12
   settingsProxy["BarSmith_ShowBackdrop"]      = (BarSmith.chardb.barShowBackdrop ~= false)
   settingsProxy["BarSmith_AutoHideMouseover"] = (BarSmith.chardb.barAutoHideMouseover == true)
   settingsProxy["BarSmith_FlyoutDirection"]   = BarSmith.chardb.flyoutDirection or "TOP"
@@ -122,6 +123,14 @@ local function BuildTooltipModifierOptions()
   container:Add("SHIFT", "Shift")
   container:Add("CTRL", "Ctrl")
   return container:GetData()
+end
+
+local function FormatInt(value)
+  return tostring(math.floor((tonumber(value) or 0) + 0.5))
+end
+
+local function FormatFloat2(value)
+  return string.format("%.2f", tonumber(value) or 0)
 end
 
 ------------------------------------------------------------------------
@@ -219,20 +228,6 @@ function mod:Init()
     Settings.CreateCheckbox(category, setting, tooltip)
   end
 
-  -- Auto-fill on events
-  do
-    local variable = "BarSmith_AutoFill"
-    local name = "Auto-Fill on Login/Zone Change"
-    local tooltip = "Automatically scan and place items when you log in, change zones, or update your bags."
-    local defaultValue = defaultsChar.autoFill == true
-    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "boolean", name,
-    defaultValue)
-    Settings.SetOnValueChangedCallback(variable, function(_, _, val)
-      BarSmith.chardb.autoFill = val
-    end)
-    Settings.CreateCheckbox(category, setting, tooltip)
-  end
-
   ---------- Bar Settings ----------
   layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Bar Settings"))
 
@@ -269,6 +264,7 @@ function mod:Init()
       end
     end)
     local options = Settings.CreateSliderOptions(1, 12, 1)
+    options:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right, FormatInt)
     Settings.CreateSlider(category, setting, options, tooltip)
   end
 
@@ -288,6 +284,28 @@ function mod:Init()
       end
     end)
     local options = Settings.CreateSliderOptions(24, 64, 1)
+    options:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right, FormatInt)
+    Settings.CreateSlider(category, setting, options, tooltip)
+  end
+
+  -- Flyout max
+  do
+    local variable = "BarSmith_FlyoutMax"
+    local name = "Flyout Button Cap"
+    local tooltip = "Maximum number of buttons shown in each flyout."
+    local defaultValue = defaultsChar.flyoutMax or 12
+    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "number", name,
+    defaultValue)
+    Settings.SetOnValueChangedCallback(variable, function(_, _, val)
+      BarSmith.chardb.flyoutMax = math.max(1, math.min(24, val))
+      local barFrame = BarSmith:GetModule("BarFrame")
+      if barFrame then
+        barFrame:UpdateFlyoutMax()
+      end
+      BarSmith:RunAutoFill(true)
+    end)
+    local options = Settings.CreateSliderOptions(1, 24, 1)
+    options:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right, FormatInt)
     Settings.CreateSlider(category, setting, options, tooltip)
   end
 
@@ -307,6 +325,7 @@ function mod:Init()
       end
     end)
     local options = Settings.CreateSliderOptions(0.1, 1, 0.05)
+    options:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right, FormatFloat2)
     Settings.CreateSlider(category, setting, options, tooltip)
   end
 
@@ -426,6 +445,7 @@ function mod:Init()
       end
     end)
     local options = Settings.CreateSliderOptions(1, 12, 1)
+    options:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right, FormatInt)
     Settings.CreateSlider(quickBarCategory, setting, options, tooltip)
   end
 
@@ -445,6 +465,7 @@ function mod:Init()
       end
     end)
     local options = Settings.CreateSliderOptions(24, 64, 1)
+    options:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right, FormatInt)
     Settings.CreateSlider(quickBarCategory, setting, options, tooltip)
   end
 
@@ -464,6 +485,7 @@ function mod:Init()
       end
     end)
     local options = Settings.CreateSliderOptions(0.1, 1, 0.05)
+    options:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right, FormatFloat2)
     Settings.CreateSlider(quickBarCategory, setting, options, tooltip)
   end
 
@@ -851,6 +873,19 @@ function mod:Init()
   ---------- Advanced ----------
 
   advancedLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Advanced"))
+
+  do
+    local variable = "BarSmith_AutoFill"
+    local name = "Auto-Fill on Login/Zone Change"
+    local tooltip = "Automatically scan and place items when you log in, change zones, or update your bags."
+    local defaultValue = defaultsChar.autoFill == true
+    local setting = Settings.RegisterAddOnSetting(advancedCategory, variable, variable, settingsProxy, "boolean", name,
+    defaultValue)
+    Settings.SetOnValueChangedCallback(variable, function(_, _, val)
+      BarSmith.chardb.autoFill = val
+    end)
+    Settings.CreateCheckbox(advancedCategory, setting, tooltip)
+  end
 
   do
     local variable = "BarSmith_Masque"

@@ -11,6 +11,10 @@ function BarFrame:SetFlyoutItems(btn, children)
   btn.flyoutOpen = false
 
   local childCount = children and #children or 0
+  local max = C.MAX_FLYOUT_BUTTONS or 0
+  if max > 0 then
+    childCount = math.min(childCount, max)
+  end
   if not InCombatLockdown() then
     btn:SetAttribute("bs_flyout_count", childCount)
   end
@@ -21,7 +25,7 @@ function BarFrame:SetFlyoutItems(btn, children)
   end
 
   for i, childBtn in ipairs(btn.flyoutButtons or {}) do
-    local childData = children and children[i]
+    local childData = (children and i <= childCount) and children[i] or nil
 
     childBtn:SetAttribute("type", nil)
     childBtn:SetAttribute("spell", nil)

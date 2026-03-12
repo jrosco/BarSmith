@@ -23,6 +23,7 @@ BarSmith.DEFAULTS = {
     barShowBackdrop = true,           -- show the bar container background/border
     barAutoHideMouseover = false,     -- fade bar until mouseover
     barAlpha = 1,                     -- bar frame alpha (0.1 - 1.0)
+    flyoutMax = 12,                   -- max buttons per flyout (1-24)
     flyoutDirection = "TOP",          -- TOP, BOTTOM, LEFT, RIGHT
     tooltipModifier = "NONE",         -- NONE, ALT, SHIFT, CTRL
     barPosition = nil,                -- saved {point, relPoint, x, y}

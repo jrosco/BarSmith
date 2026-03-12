@@ -272,94 +272,111 @@ end
 
 function BarFrame:CreateFlyoutButtons(parentBtn)
   local prefix = parentBtn:GetName() .. "Flyout"
-  for i = 1, C.MAX_FLYOUT_BUTTONS do
-    local child = CreateFrame("Button", prefix .. i, self.frame, "SecureActionButtonTemplate")
-    local buttonSize = self:GetButtonSize()
-    child:SetSize(buttonSize, buttonSize)
-    child:RegisterForClicks("AnyUp", "AnyDown")
-    child:SetHitRectInsets(-C.HOVER_HIT_INSET, -C.HOVER_HIT_INSET, -C.HOVER_HIT_INSET, -C.HOVER_HIT_INSET)
-
-    child:SetPushedTexture("Interface\\Buttons\\UI-Quickslot-Depress")
-    child:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
-
-    child.icon = child:CreateTexture(prefix .. i .. "Icon", "BACKGROUND")
-    child.icon:SetAllPoints()
-    child.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
-
-    child.cooldown = child.cooldown or CreateFrame("Cooldown", prefix .. i .. "Cooldown", child, "CooldownFrameTemplate")
-    child.cooldown:SetAllPoints()
-
-    child.count = child.count or child:CreateFontString(prefix .. i .. "Count", "OVERLAY", "NumberFontNormalSmallGray")
-    child.count:SetPoint("BOTTOMLEFT", 2, 2)
-    child.count:SetText("")
-
-    child.hotkey = child.hotkey or child:CreateFontString(prefix .. i .. "HotKey", "OVERLAY", "NumberFontNormalSmallGray")
-    child.hotkey:SetPoint("TOPRIGHT", -2, -2)
-    child.hotkey:SetTextColor(1, 0.82, 0)
-    child.hotkey:SetText("")
-
-    child.overlayIcon = child.overlayIcon or child:CreateTexture(prefix .. i .. "Overlay", "OVERLAY")
-    child.overlayIcon:SetDrawLayer("OVERLAY", 6)
-    child.overlayIcon:SetAlpha(C.OVERLAY_ICON_ALPHA)
-    child.overlayIcon:Hide()
-    self:ApplyOverlayIconStyle(child)
-
-    child.parentButton = parentBtn
-    child.itemData = nil
-    child.overlayConfig = nil
-
-    if BarSmith.MasqueAddButton then
-      BarSmith:MasqueAddButton(child)
+  parentBtn.flyoutButtons = parentBtn.flyoutButtons or {}
+  local max = C.MAX_FLYOUT_BUTTONS or 0
+  if #parentBtn.flyoutButtons > max then
+    for i = max + 1, #parentBtn.flyoutButtons do
+      local child = parentBtn.flyoutButtons[i]
+      if child then
+        child:Hide()
+      end
     end
+    for i = #parentBtn.flyoutButtons, max + 1, -1 do
+      parentBtn.flyoutButtons[i] = nil
+    end
+  end
 
-    child:SetScript("OnEnter", function(b)
-      self:NotifyMouseEnter()
-      self:CancelAutoCloseTimer()
-      self:HandleTooltipEnter(b, true)
-    end)
-    child:SetScript("OnLeave", function(b)
-      self:NotifyMouseLeave()
-      self:HandleTooltipLeave(b)
-      self:StartAutoCloseTimer()
-    end)
-    child:SetScript("OnReceiveDrag", function(b)
-      self:HandleReceiveDrag(b)
-    end)
-    child:HookScript("OnMouseUp", function(b, button)
-      if IsExcludeRemoveClick(button) then
-        return
-      end
-      if button == "LeftButton" and IsControlKeyDown() then
-        self:TogglePinnedForButton(b)
-        return
-      end
-      if IsQuickBarAddClick(button) and b and b.itemData then
-        local quickBar = BarSmith:GetModule("QuickBar")
-        if quickBar and quickBar.AddFromItemData then
-          quickBar:AddFromItemData(b.itemData)
-        end
-      end
-    end)
-    child:SetScript("PostClick", function(b, button)
-      if IsQuickBarAddClick(button) then
-        return
-      end
-      self:HandleButtonPostClick(b, button)
-      if not (button == "LeftButton" and IsControlKeyDown()) then
-        local moduleName = b.itemData and b.itemData.module
-        local pinned = moduleName and BarSmith:GetPinnedForModule(moduleName)
-        if not pinned or BarSmith:GetActionIdentityKey(b.itemData) == pinned then
-          self:PromoteChildAsPrimary(b.parentButton, b.itemData)
-        end
-      end
-      -- No timer restart here; OnLeave handles it when mouse actually leaves
-    end)
+  for i = 1, max do
+    local child = parentBtn.flyoutButtons[i]
+    if not child then
+      child = CreateFrame("Button", prefix .. i, self.frame, "SecureActionButtonTemplate")
+      local buttonSize = self:GetButtonSize()
+      child:SetSize(buttonSize, buttonSize)
+      child:RegisterForClicks("AnyUp", "AnyDown")
+      child:SetHitRectInsets(-C.HOVER_HIT_INSET, -C.HOVER_HIT_INSET, -C.HOVER_HIT_INSET, -C.HOVER_HIT_INSET)
 
-    SecureHandlerWrapScript(child, "OnEnter", parentBtn, FLYOUT_SECURE_SHOW_CHILD)
-    SecureHandlerWrapScript(child, "OnLeave", parentBtn, FLYOUT_SECURE_HIDE_CHILD)
+      child:SetPushedTexture("Interface\\Buttons\\UI-Quickslot-Depress")
+      child:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+
+      child.icon = child:CreateTexture(prefix .. i .. "Icon", "BACKGROUND")
+      child.icon:SetAllPoints()
+      child.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+
+      child.cooldown = child.cooldown or CreateFrame("Cooldown", prefix .. i .. "Cooldown", child, "CooldownFrameTemplate")
+      child.cooldown:SetAllPoints()
+
+      child.count = child.count or child:CreateFontString(prefix .. i .. "Count", "OVERLAY", "NumberFontNormalSmallGray")
+      child.count:SetPoint("BOTTOMLEFT", 2, 2)
+      child.count:SetText("")
+
+      child.hotkey = child.hotkey or child:CreateFontString(prefix .. i .. "HotKey", "OVERLAY", "NumberFontNormalSmallGray")
+      child.hotkey:SetPoint("TOPRIGHT", -2, -2)
+      child.hotkey:SetTextColor(1, 0.82, 0)
+      child.hotkey:SetText("")
+
+      child.overlayIcon = child.overlayIcon or child:CreateTexture(prefix .. i .. "Overlay", "OVERLAY")
+      child.overlayIcon:SetDrawLayer("OVERLAY", 6)
+      child.overlayIcon:SetAlpha(C.OVERLAY_ICON_ALPHA)
+      child.overlayIcon:Hide()
+      self:ApplyOverlayIconStyle(child)
+
+      child.parentButton = parentBtn
+      child.itemData = nil
+      child.overlayConfig = nil
+
+      if BarSmith.MasqueAddButton then
+        BarSmith:MasqueAddButton(child)
+      end
+
+      child:SetScript("OnEnter", function(b)
+        self:NotifyMouseEnter()
+        self:CancelAutoCloseTimer()
+        self:HandleTooltipEnter(b, true)
+      end)
+      child:SetScript("OnLeave", function(b)
+        self:NotifyMouseLeave()
+        self:HandleTooltipLeave(b)
+        self:StartAutoCloseTimer()
+      end)
+      child:SetScript("OnReceiveDrag", function(b)
+        self:HandleReceiveDrag(b)
+      end)
+      child:HookScript("OnMouseUp", function(b, button)
+        if IsExcludeRemoveClick(button) then
+          return
+        end
+        if button == "LeftButton" and IsControlKeyDown() then
+          self:TogglePinnedForButton(b)
+          return
+        end
+        if IsQuickBarAddClick(button) and b and b.itemData then
+          local quickBar = BarSmith:GetModule("QuickBar")
+          if quickBar and quickBar.AddFromItemData then
+            quickBar:AddFromItemData(b.itemData)
+          end
+        end
+      end)
+      child:SetScript("PostClick", function(b, button)
+        if IsQuickBarAddClick(button) then
+          return
+        end
+        self:HandleButtonPostClick(b, button)
+        if not (button == "LeftButton" and IsControlKeyDown()) then
+          local moduleName = b.itemData and b.itemData.module
+          local pinned = moduleName and BarSmith:GetPinnedForModule(moduleName)
+          if not pinned or BarSmith:GetActionIdentityKey(b.itemData) == pinned then
+            self:PromoteChildAsPrimary(b.parentButton, b.itemData)
+          end
+        end
+        -- No timer restart here; OnLeave handles it when mouse actually leaves
+      end)
+
+      SecureHandlerWrapScript(child, "OnEnter", parentBtn, FLYOUT_SECURE_SHOW_CHILD)
+      SecureHandlerWrapScript(child, "OnLeave", parentBtn, FLYOUT_SECURE_HIDE_CHILD)
+      child:Hide()
+      parentBtn.flyoutButtons[i] = child
+    end
     parentBtn:SetFrameRef("bs_flyout" .. i, child)
-    child:Hide()
-    table.insert(parentBtn.flyoutButtons, child)
   end
 end
 
