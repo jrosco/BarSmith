@@ -50,6 +50,23 @@ local MODULE_LABELS = {
   macros       = "Macros",
 }
 
+local MODULE_FLYOUT_ORDER = {
+  { key = "questItems", label = "Quest Items" },
+  { key = "hearthstones", label = "Hearthstones" },
+  { key = "consumables", label = "Consumables (All)" },
+  { key = "consumables_potions", label = "Consumables: Potions" },
+  { key = "consumables_flask", label = "Consumables: Flasks / Elixirs" },
+  { key = "consumables_food", label = "Consumables: Food / Drink" },
+  { key = "consumables_bandage", label = "Consumables: Bandages" },
+  { key = "consumables_utility", label = "Consumables: Utilities" },
+  { key = "trinkets", label = "Trinkets" },
+  { key = "professions", label = "Professions" },
+  { key = "mounts", label = "Mounts" },
+  { key = "toys", label = "Toys" },
+  { key = "classSpells", label = "Class Special Spells" },
+  { key = "macros", label = "Macros" },
+}
+
 function BarSmith:UpdateSettingsProxy(key, value)
   if not key then return end
   settingsProxy[key] = value
@@ -105,6 +122,11 @@ function BarSmith:RefreshSettingsProxy()
     settingsProxy["BarSmith_Mod_" .. key] = BarSmith.chardb.modules[key]
   end
 
+  local overrides = BarSmith.chardb.flyoutDirectionByModule or {}
+  for _, entry in ipairs(MODULE_FLYOUT_ORDER) do
+    settingsProxy["BarSmith_ModFlyout_" .. entry.key] = overrides[entry.key] or "GLOBAL"
+  end
+
   BarSmith:Debug("Settings proxy refreshed.")
 end
 
@@ -115,6 +137,27 @@ local function BuildDirectionDropdownOptions()
   container:Add("LEFT", "Left")
   container:Add("RIGHT", "Right")
   return container:GetData()
+end
+
+local function BuildModuleDirectionDropdownOptions()
+  local container = Settings.CreateControlTextContainer()
+  container:Add("GLOBAL", "Use Global")
+  container:Add("TOP", "Top")
+  container:Add("BOTTOM", "Bottom")
+  container:Add("LEFT", "Left")
+  container:Add("RIGHT", "Right")
+  return container:GetData()
+end
+
+local function NormalizeFlyoutDirection(value, allowGlobal)
+  local dir = string.upper(tostring(value or ""))
+  if allowGlobal and dir == "GLOBAL" then
+    return "GLOBAL"
+  end
+  if dir ~= "TOP" and dir ~= "BOTTOM" and dir ~= "LEFT" and dir ~= "RIGHT" then
+    return allowGlobal and "GLOBAL" or "TOP"
+  end
+  return dir
 end
 
 local function BuildTooltipModifierOptions()
@@ -375,10 +418,7 @@ function mod:Init()
     local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "string", name,
     defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
-      local direction = string.upper(tostring(val or "TOP"))
-      if direction ~= "TOP" and direction ~= "BOTTOM" and direction ~= "LEFT" and direction ~= "RIGHT" then
-        direction = "TOP"
-      end
+      local direction = NormalizeFlyoutDirection(val, false)
       BarSmith.chardb.flyoutDirection = direction
       settingsProxy[variable] = direction
 
@@ -655,6 +695,32 @@ function mod:Init()
       BarSmith:FireCallback("SETTINGS_CHANGED")
     end)
     Settings.CreateCheckbox(modulesCategory, setting, tooltip)
+  end
+
+  modulesLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Module Flyout Direction Overrides"))
+
+  for _, entry in ipairs(MODULE_FLYOUT_ORDER) do
+    local variable = "BarSmith_ModFlyout_" .. entry.key
+    local name = entry.label .. " Flyout Direction"
+    local tooltip = "Override flyout direction for the " .. entry.label .. " button. Use Global to inherit the main setting."
+    local defaultValue = "GLOBAL"
+    local setting = Settings.RegisterAddOnSetting(modulesCategory, variable, variable, settingsProxy, "string", name,
+      defaultValue)
+    Settings.SetOnValueChangedCallback(variable, function(_, _, val)
+      local direction = NormalizeFlyoutDirection(val, true)
+      BarSmith.chardb.flyoutDirectionByModule = BarSmith.chardb.flyoutDirectionByModule or {}
+      if direction == "GLOBAL" then
+        BarSmith.chardb.flyoutDirectionByModule[entry.key] = nil
+      else
+        BarSmith.chardb.flyoutDirectionByModule[entry.key] = direction
+      end
+      settingsProxy[variable] = direction
+      local barFrame = BarSmith:GetModule("BarFrame")
+      if barFrame then
+        barFrame:HideAllFlyouts()
+      end
+    end)
+    Settings.CreateDropdown(modulesCategory, setting, BuildModuleDirectionDropdownOptions, tooltip)
   end
 
   ---------- Consumable Options ----------
