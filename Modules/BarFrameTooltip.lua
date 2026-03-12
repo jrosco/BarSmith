@@ -66,6 +66,7 @@ function BarFrame:ShowButtonTooltip(btn, isFlyoutChild)
 
   GameTooltip:SetOwner(btn, "ANCHOR_RIGHT")
   local data = btn.itemData
+  local isMicroMenu = data.module == "systemMenu"
   local TYPE_INFO = {
     quest_item = { label = "Quest Item", color = { 0.85, 0.8, 0.35 } },
     potion = { label = "Potion", color = { 0.4, 0.9, 0.6 } },
@@ -89,6 +90,9 @@ function BarFrame:ShowButtonTooltip(btn, isFlyoutChild)
   local function GetTypeLabelAndColor(item)
     local t = item and item.type
     if not t then return nil, nil end
+    if isMicroMenu then
+      return "Micro Menu", { 0.6, 0.85, 1.0 }
+    end
     local info = TYPE_INFO[t]
     if info then
       return info.label, info.color
@@ -135,7 +139,7 @@ function BarFrame:ShowButtonTooltip(btn, isFlyoutChild)
   if data.isPlaceholder then
     GameTooltip:AddLine("No items available in this category.", 0.8, 0.8, 0.8)
   else
-    if isFlyoutChild then
+    if isFlyoutChild and not isMicroMenu then
       local isAuto = data.autoAdded
       if isAuto == nil then
         isAuto = BarSmith:IsAutoAdded(data)
@@ -148,7 +152,9 @@ function BarFrame:ShowButtonTooltip(btn, isFlyoutChild)
           C.TOOLTIP_SHORTCUT_COLOR .. "Ctrl + Shift + Right Click|r", 0.8, 0.8, 0.8)
       end
     end
-    if data.type == "macro" then
+    if isMicroMenu then
+      GameTooltip:AddLine("Items cannot be dragged here.", 0.8, 0.8, 0.8)
+    elseif data.type == "macro" then
       GameTooltip:AddLine("Drag a macro to assign it to this slot", 0.8, 0.8, 0.8)
     else
       GameTooltip:AddLine(C.TOOLTIP_NOTE_COLOR ..
