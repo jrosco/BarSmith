@@ -48,6 +48,25 @@ local MODULE_LABELS = {
   toys         = "Toys",
   hearthstones = "Hearthstones",
   macros       = "Macros",
+  microMenu    = "Micro Menu",
+}
+
+local MODULE_FLYOUT_ORDER = {
+  { key = "questItems", label = "Quest Items" },
+  { key = "hearthstones", label = "Hearthstones" },
+  { key = "consumables", label = "Consumables (All)" },
+  { key = "consumables_potions", label = "Consumables: Potions" },
+  { key = "consumables_flask", label = "Consumables: Flasks / Elixirs" },
+  { key = "consumables_food", label = "Consumables: Food / Drink" },
+  { key = "consumables_bandage", label = "Consumables: Bandages" },
+  { key = "consumables_utility", label = "Consumables: Utilities" },
+  { key = "trinkets", label = "Trinkets" },
+  { key = "professions", label = "Professions" },
+  { key = "mounts", label = "Mounts" },
+  { key = "toys", label = "Toys" },
+  { key = "classSpells", label = "Class Special Spells" },
+  { key = "macros", label = "Macros" },
+  { key = "microMenu", label = "Micro Menu" },
 }
 
 function BarSmith:UpdateSettingsProxy(key, value)
@@ -83,6 +102,8 @@ function BarSmith:RefreshSettingsProxy()
   settingsProxy["BarSmith_Mounts_TopFavs"]    = BarSmith.chardb.mounts.topFavorites
   settingsProxy["BarSmith_Mounts_AllFavs"]    = BarSmith.chardb.mounts.allFavorites
   settingsProxy["BarSmith_Debug"]             = BarSmith.db and BarSmith.db.debug
+  settingsProxy["BarSmith_MicroMenu_HideDefault"] = BarSmith.chardb.microMenu
+    and BarSmith.chardb.microMenu.hideDefault == true
   settingsProxy["BarSmith_Con_Potions"]       = BarSmith.chardb.consumables.potions
   settingsProxy["BarSmith_Con_Flasks"]        = BarSmith.chardb.consumables.flasks
   settingsProxy["BarSmith_Con_Food"]          = BarSmith.chardb.consumables.food
@@ -105,6 +126,11 @@ function BarSmith:RefreshSettingsProxy()
     settingsProxy["BarSmith_Mod_" .. key] = BarSmith.chardb.modules[key]
   end
 
+  local overrides = BarSmith.chardb.flyoutDirectionByModule or {}
+  for _, entry in ipairs(MODULE_FLYOUT_ORDER) do
+    settingsProxy["BarSmith_ModFlyout_" .. entry.key] = overrides[entry.key] or "GLOBAL"
+  end
+
   BarSmith:Debug("Settings proxy refreshed.")
 end
 
@@ -115,6 +141,27 @@ local function BuildDirectionDropdownOptions()
   container:Add("LEFT", "Left")
   container:Add("RIGHT", "Right")
   return container:GetData()
+end
+
+local function BuildModuleDirectionDropdownOptions()
+  local container = Settings.CreateControlTextContainer()
+  container:Add("GLOBAL", "Use Global")
+  container:Add("TOP", "Top")
+  container:Add("BOTTOM", "Bottom")
+  container:Add("LEFT", "Left")
+  container:Add("RIGHT", "Right")
+  return container:GetData()
+end
+
+local function NormalizeFlyoutDirection(value, allowGlobal)
+  local dir = string.upper(tostring(value or ""))
+  if allowGlobal and dir == "GLOBAL" then
+    return "GLOBAL"
+  end
+  if dir ~= "TOP" and dir ~= "BOTTOM" and dir ~= "LEFT" and dir ~= "RIGHT" then
+    return allowGlobal and "GLOBAL" or "TOP"
+  end
+  return dir
 end
 
 local function BuildTooltipModifierOptions()
@@ -369,16 +416,13 @@ function mod:Init()
   -- Flyout direction
   do
     local variable = "BarSmith_FlyoutDirection"
-    local name = "Flyout Direction"
+    local name = "Global Flyout Direction"
     local tooltip = "Direction flyout buttons expand from the main button."
     local defaultValue = defaultsChar.flyoutDirection or "TOP"
     local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "string", name,
     defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
-      local direction = string.upper(tostring(val or "TOP"))
-      if direction ~= "TOP" and direction ~= "BOTTOM" and direction ~= "LEFT" and direction ~= "RIGHT" then
-        direction = "TOP"
-      end
+      local direction = NormalizeFlyoutDirection(val, false)
       BarSmith.chardb.flyoutDirection = direction
       settingsProxy[variable] = direction
 
@@ -410,7 +454,12 @@ function mod:Init()
   end
 
   ---------- QuickBar ----------
-  -- quickBarLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer("QuickBar"))
+  do
+    local initializer = Settings.CreateElementInitializer("BarSmithSettingsNoteTemplate", {
+      text = "QuickBar is a small, on-demand bar shown at your cursor via the keybind. Use it for temporary or situational items without changing the main bar.",
+    })
+    quickBarLayout:AddInitializer(initializer)
+  end
 
   -- Enable QuickBar
   do
@@ -552,6 +601,14 @@ function mod:Init()
 
   -- modulesLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Modules"))
 
+  do
+    local initializer = Settings.CreateElementInitializer("BarSmithSettingsNoteTemplate", {
+      text =
+      "Enable or disable entire modules of items with the checkboxes below. This will show or hide the module categories on the bar, and also prevent them from being auto-filled with items.\n\n",
+    })
+    modulesLayout:AddInitializer(initializer)
+  end
+
   for key, label in pairs(MODULE_LABELS) do
     local variable = "BarSmith_Mod_" .. key
     local defaultValue = true
@@ -563,6 +620,12 @@ function mod:Init()
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       BarSmith.chardb.modules[key] = val
       BarSmith:FireCallback("SETTINGS_CHANGED")
+      if key == "microMenu" then
+        local microMenu = BarSmith:GetModule("MicroMenu")
+        if microMenu and microMenu.UpdateDefaultMenuVisibility then
+          microMenu:UpdateDefaultMenuVisibility()
+        end
+      end
       -- Allow toys to load and wait before trying to enable the module
       if key == "toys" and val == true then
         C_Timer.After(1.5, function()
@@ -581,6 +644,12 @@ function mod:Init()
 
   ---------- Module Split ----------
   modulesLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Consumables Module Split"))
+  do
+    local initializer = Settings.CreateElementInitializer("BarSmithSettingsNoteTemplate", {
+      text = "Split the main Consumables button into dedicated buttons. When enabled, matching items are moved out of the parent Consumables flyout.",
+    })
+    modulesLayout:AddInitializer(initializer)
+  end
 
   do
     local variable = "BarSmith_Con_Split_Potions"
@@ -657,8 +726,46 @@ function mod:Init()
     Settings.CreateCheckbox(modulesCategory, setting, tooltip)
   end
 
+  modulesLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Module Flyout Direction Overrides"))
+  do
+    local initializer = Settings.CreateElementInitializer("BarSmithSettingsNoteTemplate", {
+      text = "Override flyout direction per module. Use Global to inherit the main flyout direction setting.",
+    })
+    modulesLayout:AddInitializer(initializer)
+  end
+
+  for _, entry in ipairs(MODULE_FLYOUT_ORDER) do
+    local variable = "BarSmith_ModFlyout_" .. entry.key
+    local name = entry.label .. " Flyout Direction"
+    local tooltip = "Override flyout direction for the " .. entry.label .. " button. Use Global to inherit the main setting."
+    local defaultValue = "GLOBAL"
+    local setting = Settings.RegisterAddOnSetting(modulesCategory, variable, variable, settingsProxy, "string", name,
+      defaultValue)
+    Settings.SetOnValueChangedCallback(variable, function(_, _, val)
+      local direction = NormalizeFlyoutDirection(val, true)
+      BarSmith.chardb.flyoutDirectionByModule = BarSmith.chardb.flyoutDirectionByModule or {}
+      if direction == "GLOBAL" then
+        BarSmith.chardb.flyoutDirectionByModule[entry.key] = nil
+      else
+        BarSmith.chardb.flyoutDirectionByModule[entry.key] = direction
+      end
+      settingsProxy[variable] = direction
+      local barFrame = BarSmith:GetModule("BarFrame")
+      if barFrame then
+        barFrame:HideAllFlyouts()
+      end
+    end)
+    Settings.CreateDropdown(modulesCategory, setting, BuildModuleDirectionDropdownOptions, tooltip)
+  end
+
   ---------- Consumable Options ----------
   filtersLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Combined Consumables Module Filters"))
+  do
+    local initializer = Settings.CreateElementInitializer("BarSmithSettingsNoteTemplate", {
+      text = "Filters that affect the combined Consumables module (when split buttons are not used).",
+    })
+    filtersLayout:AddInitializer(initializer)
+  end
 
   do
     local variable = "BarSmith_Con_CurrentOnly"
@@ -745,6 +852,12 @@ function mod:Init()
   end
 
   filtersLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Consumables Split Module Filters"))
+  do
+    local initializer = Settings.CreateElementInitializer("BarSmithSettingsNoteTemplate", {
+      text = "Filters that apply only to split Consumables buttons.",
+    })
+    filtersLayout:AddInitializer(initializer)
+  end
 
   do
     local variable = "BarSmith_Con_SplitCur_Potions"
@@ -823,6 +936,12 @@ function mod:Init()
 
   ---------- Item Filters ----------
   filtersLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Item Filters"))
+  do
+    local initializer = Settings.CreateElementInitializer("BarSmithSettingsNoteTemplate", {
+      text = "General item rules that apply across modules unless overridden.",
+    })
+    filtersLayout:AddInitializer(initializer)
+  end
 
   do
     local variable = "BarSmith_Filter_BGOnly"
@@ -842,6 +961,12 @@ function mod:Init()
   ---------- Mount Options ----------
 
   mountLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Options"))
+  do
+    local initializer = Settings.CreateElementInitializer("BarSmithSettingsNoteTemplate", {
+      text = "Control how mounts are added to the Mounts module.",
+    })
+    mountLayout:AddInitializer(initializer)
+  end
 
   do
     local variable = "BarSmith_Mounts_Random"
@@ -898,6 +1023,25 @@ function mod:Init()
     defaultValue)
     Settings.SetOnValueChangedCallback(variable, function(_, _, val)
       BarSmith.chardb.autoFill = val
+    end)
+    Settings.CreateCheckbox(advancedCategory, setting, tooltip)
+  end
+
+  do
+    local variable = "BarSmith_MicroMenu_HideDefault"
+    local name = "Hide Default Micro Menu"
+    local tooltip = "Hide the Blizzard micro menu when the Micro Menu module is enabled."
+    local defaultValue = defaultsChar.microMenu and defaultsChar.microMenu.hideDefault == true
+    local setting = Settings.RegisterAddOnSetting(advancedCategory, variable, variable, settingsProxy, "boolean", name,
+      defaultValue)
+    Settings.SetOnValueChangedCallback(variable, function(_, _, val)
+      BarSmith.chardb.microMenu = BarSmith.chardb.microMenu or {}
+      BarSmith.chardb.microMenu.hideDefault = (val == true)
+      settingsProxy[variable] = (val == true)
+      local microMenu = BarSmith:GetModule("MicroMenu")
+      if microMenu and microMenu.UpdateDefaultMenuVisibility then
+        microMenu:UpdateDefaultMenuVisibility()
+      end
     end)
     Settings.CreateCheckbox(advancedCategory, setting, tooltip)
   end

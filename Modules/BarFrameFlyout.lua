@@ -11,9 +11,16 @@ function BarFrame:SetFlyoutItems(btn, children)
   btn.flyoutOpen = false
 
   local childCount = children and #children or 0
-  local max = C.MAX_FLYOUT_BUTTONS or 0
-  if max > 0 then
-    childCount = math.min(childCount, max)
+  local moduleKey = btn.groupData and btn.groupData.module
+  if moduleKey == "microMenu" then
+    if childCount > 0 then
+      self:CreateFlyoutButtons(btn, childCount)
+    end
+  else
+    local max = C.MAX_FLYOUT_BUTTONS or 0
+    if max > 0 then
+      childCount = math.min(childCount, max)
+    end
   end
   if not InCombatLockdown() then
     btn:SetAttribute("bs_flyout_count", childCount)
@@ -80,7 +87,7 @@ function BarFrame:UpdateFlyoutPositions(btn)
   if not btn or InCombatLockdown() then return end
 
   local topLevel = self.frame:GetFrameLevel() + 50
-  local direction = self:GetFlyoutDirection()
+  local direction = self:GetFlyoutDirection(btn)
   local buttonSize = self:GetButtonSize()
 
   for i, childBtn in ipairs(btn.flyoutButtons or {}) do
@@ -168,8 +175,40 @@ function BarFrame:PromoteChildAsPrimary(parentBtn, childData)
   self:ApplyButtonVisuals(parentBtn, childData)
 end
 
-function BarFrame:GetFlyoutDirection()
-  local direction = string.upper(tostring(BarSmith.chardb.flyoutDirection or "TOP"))
+local function GetModuleKeyFromButton(btn)
+  if not btn then return nil end
+  if btn.groupData and btn.groupData.module then
+    return btn.groupData.module
+  end
+  if btn.itemData and btn.itemData.module then
+    return btn.itemData.module
+  end
+  if btn.parentButton and btn.parentButton.groupData and btn.parentButton.groupData.module then
+    return btn.parentButton.groupData.module
+  end
+  if btn.parentButton and btn.parentButton.itemData and btn.parentButton.itemData.module then
+    return btn.parentButton.itemData.module
+  end
+  return nil
+end
+
+function BarFrame:GetFlyoutDirection(btnOrModule)
+  local moduleKey = nil
+  if type(btnOrModule) == "string" then
+    moduleKey = btnOrModule
+  else
+    moduleKey = GetModuleKeyFromButton(btnOrModule)
+  end
+
+  local direction = nil
+  local chardb = BarSmith.chardb
+  if moduleKey and chardb and chardb.flyoutDirectionByModule then
+    direction = chardb.flyoutDirectionByModule[moduleKey]
+  end
+  if not direction then
+    direction = chardb and chardb.flyoutDirection or "TOP"
+  end
+  direction = string.upper(tostring(direction))
   if not C.VALID_FLYOUT_DIRECTIONS[direction] then
     return "TOP"
   end

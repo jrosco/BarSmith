@@ -774,6 +774,10 @@ local function CopyQuickBarData(data)
   return {
     name = data.name,
     icon = data.icon,
+    iconAtlas = data.iconAtlas,
+    portraitUnit = data.portraitUnit,
+    overlay = data.overlay,
+    overlayAtlas = data.overlayAtlas,
     type = data.type,
     count = data.count,
     itemID = data.itemID,
