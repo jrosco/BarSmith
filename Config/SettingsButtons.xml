@@ -19,4 +19,18 @@
       </Button>
     </Frames>
   </Frame>
+
+  <Frame name="BarSmithSettingsNoteTemplate" virtual="true" mixin="BarSmithSettingsNoteMixin">
+    <Size x="600" y="40"/>
+    <Layers>
+      <Layer level="ARTWORK">
+        <FontString name="$parentText" parentKey="Text" inherits="GameFontHighlightSmall">
+          <Anchors>
+            <Anchor point="TOPLEFT" x="12" y="-4"/>
+            <Anchor point="TOPRIGHT" x="-12" y="-4"/>
+          </Anchors>
+        </FontString>
+      </Layer>
+    </Layers>
+  </Frame>
 </Ui>

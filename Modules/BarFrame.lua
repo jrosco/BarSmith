@@ -269,7 +269,11 @@ function BarFrame:UpdateFlyoutMax()
   local max = self:GetFlyoutMax()
   self.constants.MAX_FLYOUT_BUTTONS = max
   for _, btn in ipairs(self.buttons or {}) do
-    self:CreateFlyoutButtons(btn)
+    if btn.groupData and btn.groupData.module == "microMenu" and btn.flyoutItems then
+      self:CreateFlyoutButtons(btn, #btn.flyoutItems)
+    else
+      self:CreateFlyoutButtons(btn)
+    end
   end
 end
 
