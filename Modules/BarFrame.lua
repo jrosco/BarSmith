@@ -569,13 +569,13 @@ end
 function BarFrame:SetLocked(locked)
   if not BarSmith.chardb then return end
   if not locked then
-    if BarSmith.chardb._autoHideBeforeUnlock == nil then
-      BarSmith.chardb._autoHideBeforeUnlock = BarSmith.chardb.barAutoHideMouseover
+    if self._autoHideBeforeUnlock == nil then
+      self._autoHideBeforeUnlock = BarSmith.chardb.barAutoHideMouseover
     end
     BarSmith.chardb.barAutoHideMouseover = false
-  elseif BarSmith.chardb._autoHideBeforeUnlock ~= nil then
-    BarSmith.chardb.barAutoHideMouseover = BarSmith.chardb._autoHideBeforeUnlock
-    BarSmith.chardb._autoHideBeforeUnlock = nil
+  elseif self._autoHideBeforeUnlock ~= nil then
+    BarSmith.chardb.barAutoHideMouseover = self._autoHideBeforeUnlock
+    self._autoHideBeforeUnlock = nil
   end
   BarSmith.chardb.barLocked = locked
   if BarSmith.UpdateSettingsProxy then

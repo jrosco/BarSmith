@@ -11,11 +11,14 @@ SLASH_BARSMITH1 = "/barsmith"
 SLASH_BARSMITH2 = "/bs"
 
 SlashCmdList["BARSMITH"] = function(msg)
-  msg = strtrim(msg or ""):lower()
+  msg = strtrim(msg or "")
+  local command, rest = msg:match("^(%S+)%s*(.*)$")
+  command = string.lower(command or "")
+  rest = strtrim(rest or "")
 
-  if msg == "fill" or msg == "run" then
+  if command == "fill" or command == "run" then
     BarSmith:RunAutoFill()
-  elseif msg == "clear" then
+  elseif command == "clear" then
     if not InCombatLockdown() then
       local barFrame = BarSmith:GetModule("BarFrame")
       if barFrame then
@@ -26,26 +29,25 @@ SlashCmdList["BARSMITH"] = function(msg)
     else
       BarSmith:Print("Cannot clear bar during combat.")
     end
-  elseif msg == "lock" then
+  elseif command == "lock" then
     local barFrame = BarSmith:GetModule("BarFrame")
     if barFrame then
       barFrame:SetLocked(not BarSmith.chardb.barLocked)
     end
-  elseif msg == "show" then
+  elseif command == "show" then
     local barFrame = BarSmith:GetModule("BarFrame")
     if barFrame then barFrame:Show() end
-  elseif msg == "hide" then
+  elseif command == "hide" then
     local barFrame = BarSmith:GetModule("BarFrame")
     if barFrame then barFrame:Hide() end
-  elseif msg == "config" or msg == "options" or msg == "settings" then
+  elseif command == "config" or command == "options" or command == "settings" then
     BarSmith:OpenSettings()
-  elseif msg == "reset" then
+  elseif command == "reset" then
     BarSmith:ResetCharacterSettings()
-  elseif msg == "debug" then
+  elseif command == "debug" then
     BarSmith.db.debug = not BarSmith.db.debug
     BarSmith:Print("Debug mode: " .. (BarSmith.db.debug and "|cff00ff00ON|r" or "|cffff0000OFF|r"))
-  elseif msg == "exclude" or msg == "exclude list" or msg == "ex" or msg == "ex list"
-      or msg == "blacklist" or msg == "blacklist list" or msg == "bl" or msg == "bl list" then
+  elseif command == "exclude" or command == "ex" or command == "blacklist" then
     local exclude = BarSmith.chardb.exclude or BarSmith.chardb.blacklist or {}
     local count = 0
     BarSmith:Print("Excluded items:")
@@ -56,18 +58,18 @@ SlashCmdList["BARSMITH"] = function(msg)
     if count == 0 then
       BarSmith:Print("  (none)")
     end
-  elseif msg == "clearexclude" or msg == "exclude clear" or msg == "ex clear"
-      or msg == "clearblacklist" or msg == "blacklist clear" or msg == "bl clear" then
+  elseif command == "clearexclude" or command == "exclear" or command == "clearblacklist"
+      or (command == "ex" and rest == "clear") or (command == "blacklist" and rest == "clear") then
     BarSmith.chardb.exclude = {}
     BarSmith.chardb.blacklist = nil
     BarSmith:Print("Exclude list cleared.")
     BarSmith:RunAutoFill(true)
-  elseif msg == "clearinclude" or msg == "include clear"
-      or msg == "clearextras" or msg == "extras clear" then
+  elseif command == "clearinclude" or command == "clearextras" or (command == "include" and rest == "clear")
+      or (command == "extras" and rest == "clear") then
     BarSmith:ClearInclude()
     BarSmith:Print("Include list cleared.")
     BarSmith:RunAutoFill(true)
-  elseif msg == "status" then
+  elseif command == "status" then
     BarSmith:PrintStatus()
   else
     BarSmith:Print("Commands:")
@@ -77,9 +79,9 @@ SlashCmdList["BARSMITH"] = function(msg)
     BarSmith:Print("  |cff00ccff/bs show|r / |cff00ccff/bs hide|r — Show or hide the bar")
     BarSmith:Print("  |cff00ccff/bs config|r — Open settings panel")
     BarSmith:Print("  |cff00ccff/bs status|r — Show current module status")
-    BarSmith:Print("  |cff00ccff/bs reset|r — Reset character settings")
+    BarSmith:Print("  |cff00ccff/bs reset|r — Reset the active profile")
     BarSmith:Print("  |cff00ccff/bs exclude|r / |cff00ccff/bs ex|r — Show excluded items")
-    BarSmith:Print("  |cff00ccff/bs clearexclude|r / |cff00ccff/bs ex clear|r — Clear excluded items")
+    BarSmith:Print("  |cff00ccff/bs clearexclude|r / |cff00ccff/bs exclear|r / |cff00ccff/bs ex clear|r — Clear excluded items")
     BarSmith:Print("  |cff00ccff/bs clearinclude|r — Clear included items/spells")
     BarSmith:Print("  |cff00ccff/bs debug|r — Toggle debug output")
   end
@@ -118,6 +120,12 @@ end
 
 function BarSmith:PrintStatus()
   self:Print("--- BarSmith Status ---")
+  local activeProfileID = self:GetActiveProfileID()
+  local profileLabel = self:GetActiveProfileName()
+  if activeProfileID == "default" then
+    profileLabel = profileLabel .. " (Default)"
+  end
+  self:Print("Profile: " .. profileLabel)
   self:Print("Enabled: " .. (self.chardb.enabled and "|cff00ff00Yes|r" or "|cffff0000No|r"))
   self:Print("Auto-fill: " .. (self.chardb.autoFill and "|cff00ff00On|r" or "|cffff0000Off|r"))
   self:Print("Bar locked: " .. (self.chardb.barLocked and "Yes" or "No"))
