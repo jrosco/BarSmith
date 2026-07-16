@@ -667,6 +667,21 @@ function QuickBar:Refresh()
   local cfg = self:GetConfig()
   cfg.slots = cfg.slots or {}
   local inCombat = InCombatLockdown()
+  if inCombat then
+    self._pendingRefresh = true
+    if not self._regenFrame then
+      local frame = CreateFrame("Frame")
+      frame:RegisterEvent("PLAYER_REGEN_ENABLED")
+      frame:SetScript("OnEvent", function()
+        if QuickBar._pendingRefresh then
+          QuickBar._pendingRefresh = nil
+          QuickBar:Refresh()
+        end
+      end)
+      self._regenFrame = frame
+    end
+    return
+  end
   if self.previewMode and not inCombat then
     self:UpdateLayout(self:GetPreviewCount())
     self:UpdateBackdropVisibility()

@@ -102,6 +102,8 @@ function BarSmith:RefreshSettingsProxy()
   settingsProxy["BarSmith_Mounts_TopFavs"]    = BarSmith.chardb.mounts.topFavorites
   settingsProxy["BarSmith_Mounts_AllFavs"]    = BarSmith.chardb.mounts.allFavorites
   settingsProxy["BarSmith_Debug"]             = BarSmith.db and BarSmith.db.debug
+  settingsProxy["BarSmith_Profile"]           = BarSmith:GetActiveProfileID()
+  settingsProxy["BarSmith_Profile_Name"]      = BarSmith:GetActiveProfileName()
   settingsProxy["BarSmith_MicroMenu_HideDefault"] = BarSmith.chardb.microMenu
     and BarSmith.chardb.microMenu.hideDefault == true
   settingsProxy["BarSmith_Con_Potions"]       = BarSmith.chardb.consumables.potions
@@ -181,6 +183,54 @@ local function FormatFloat2(value)
   return string.format("%.2f", tonumber(value) or 0)
 end
 
+local function BuildProfileDropdownOptions()
+  local container = Settings.CreateControlTextContainer()
+  for _, entry in ipairs(BarSmith:GetProfileList()) do
+    local label = entry.name
+    if entry.active then
+      label = label .. " (Active)"
+    end
+    container:Add(entry.id, label)
+  end
+  return container:GetData()
+end
+
+local function ShowProfileNamePopup(popupName, title, defaultText, onAccept)
+  StaticPopupDialogs[popupName] = {
+    text = title,
+    button1 = "OK",
+    button2 = "Cancel",
+    hasEditBox = true,
+    editBoxWidth = 240,
+    timeout = 0,
+    whileDead = true,
+    hideOnEscape = true,
+    preferredIndex = 3,
+    OnShow = function(self)
+      local editBox = self.editBox or self.EditBox
+      if not editBox then return end
+      editBox:SetText(defaultText or "")
+      editBox:HighlightText()
+      editBox:SetFocus()
+    end,
+    OnHide = function(self)
+      local editBox = self.editBox or self.EditBox
+      if editBox then
+        editBox:ClearFocus()
+      end
+    end,
+    OnAccept = function(self)
+      local editBox = self.editBox or self.EditBox
+      if not editBox then return end
+      local value = strtrim(editBox:GetText() or "")
+      if value ~= "" and onAccept then
+        onAccept(value)
+      end
+    end,
+  }
+  StaticPopup_Show(popupName)
+end
+
 ------------------------------------------------------------------------
 -- Build Settings Panel
 ------------------------------------------------------------------------
@@ -192,6 +242,7 @@ function mod:Init()
   end
   local category, layout                      = Settings.RegisterVerticalLayoutCategory(title)
   BarSmith.settingsCategoryID                 = category:GetID()
+  local profilesCategory, profilesLayout       = Settings.RegisterVerticalLayoutSubcategory(category, "Profiles")
   local quickBarCategory, quickBarLayout      = Settings.RegisterVerticalLayoutSubcategory(category, "QuickBar")
   local modulesCategory, modulesLayout        = Settings.RegisterVerticalLayoutSubcategory(category, "Modules")
   local filtersCategory, filtersLayout        = Settings.RegisterVerticalLayoutSubcategory(category, "Filters")
@@ -205,6 +256,148 @@ function mod:Init()
 
   -- Seed proxy with current values
   BarSmith:RefreshSettingsProxy()
+
+  ---------- Profiles ----------
+  profilesLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Profiles"))
+  do
+    local initializer = Settings.CreateElementInitializer("BarSmithSettingsNoteTemplate", {
+      text = "Shared profiles are account-wide. Each character selects one active profile, and Default is always available.",
+    })
+    profilesLayout:AddInitializer(initializer)
+  end
+
+  do
+    local variable = "BarSmith_Profile"
+    local name = "Active Profile"
+    local tooltip = "Choose which shared profile this character uses."
+    local defaultValue = "default"
+    local setting = Settings.RegisterProxySetting(profilesCategory, variable, "string", name, defaultValue,
+      function()
+        return BarSmith:GetActiveProfileID()
+      end,
+      function(value)
+        BarSmith:SetActiveProfile(value)
+      end)
+    Settings.CreateDropdown(profilesCategory, setting, BuildProfileDropdownOptions, tooltip)
+  end
+
+  do
+    local initializer = Settings.CreateElementInitializer("BarSmithSettingsButtonTemplate", {
+      text = "Create a new shared profile from the built-in defaults.",
+      buttonText = "New Profile",
+      OnClick = function()
+        ShowProfileNamePopup("BARSMITH_CREATE_PROFILE", "Create a new profile", "New Profile", function(name)
+          local id = BarSmith:CreateProfile(name, BarSmith.DEFAULTS and BarSmith.DEFAULTS.char or nil)
+          if id then
+            BarSmith:SetActiveProfile(id, true)
+            BarSmith:FireCallback("SETTINGS_CHANGED")
+            BarSmith:Print("Created profile: " .. BarSmith:GetActiveProfileName())
+          end
+        end)
+      end,
+    })
+    profilesLayout:AddInitializer(initializer)
+  end
+
+  do
+    local initializer = Settings.CreateElementInitializer("BarSmithSettingsButtonTemplate", {
+      text = "Clone the active profile into a new shared profile.",
+      buttonText = "Clone Profile",
+      OnClick = function()
+        local defaultText = BarSmith:GetActiveProfileName() .. " Copy"
+        ShowProfileNamePopup("BARSMITH_CLONE_PROFILE", "Clone the active profile", defaultText, function(name)
+          local id = BarSmith:CloneProfile(BarSmith:GetActiveProfileID(), name)
+          if id then
+            BarSmith:SetActiveProfile(id, true)
+            BarSmith:FireCallback("SETTINGS_CHANGED")
+            BarSmith:Print("Cloned profile to: " .. BarSmith:GetActiveProfileName())
+          end
+        end)
+      end,
+    })
+    profilesLayout:AddInitializer(initializer)
+  end
+
+  do
+    local initializer = Settings.CreateElementInitializer("BarSmithSettingsButtonTemplate", {
+      text = "Rename the active profile.",
+      buttonText = "Rename Profile",
+      OnClick = function()
+        local currentName = BarSmith:GetActiveProfileName()
+        local activeID = BarSmith:GetActiveProfileID()
+        ShowProfileNamePopup("BARSMITH_RENAME_PROFILE", "Rename the active profile", currentName, function(name)
+          local ok, err = BarSmith:RenameProfile(activeID, name)
+          if ok then
+            BarSmith:RefreshSettingsProxy()
+            BarSmith:FireCallback("SETTINGS_CHANGED")
+            BarSmith:Print("Renamed profile to: " .. BarSmith:GetActiveProfileName())
+          elseif err then
+            BarSmith:Print(err)
+          end
+        end)
+      end,
+    })
+    profilesLayout:AddInitializer(initializer)
+  end
+
+  do
+    local initializer = Settings.CreateElementInitializer("BarSmithSettingsButtonTemplate", {
+      text = "Delete the active profile. Default cannot be removed.",
+      buttonText = "Delete Profile",
+      OnClick = function()
+        local activeID = BarSmith:GetActiveProfileID()
+        local activeName = BarSmith:GetActiveProfileName()
+        if activeID == "default" then
+          BarSmith:Print("Default cannot be deleted.")
+          return
+        end
+        local dialog = StaticPopupDialogs["BARSMITH_DELETE_PROFILE"] or {}
+        StaticPopupDialogs["BARSMITH_DELETE_PROFILE"] = dialog
+        dialog.text = "Delete the active profile? This cannot be undone."
+        dialog.button1 = "Delete"
+        dialog.button2 = "Cancel"
+        dialog.timeout = 0
+        dialog.whileDead = true
+        dialog.hideOnEscape = true
+        dialog.preferredIndex = 3
+        dialog.OnAccept = function()
+          local ok, err = BarSmith:DeleteProfile(activeID)
+          if ok then
+            BarSmith:RefreshSettingsProxy()
+            BarSmith:FireCallback("SETTINGS_CHANGED")
+            BarSmith:Print("Deleted profile: " .. activeName)
+          elseif err then
+            BarSmith:Print(err)
+          end
+        end
+        StaticPopup_Show("BARSMITH_DELETE_PROFILE")
+      end,
+    })
+    profilesLayout:AddInitializer(initializer)
+  end
+
+  do
+    local initializer = Settings.CreateElementInitializer("BarSmithSettingsButtonTemplate", {
+      text = "Reset the active profile back to the built-in defaults.",
+      buttonText = "Reset Profile",
+      OnClick = function()
+        StaticPopupDialogs["BARSMITH_RESET_PROFILE"] = StaticPopupDialogs["BARSMITH_RESET_PROFILE"] or {
+          text = "Reset the active profile to defaults?",
+          button1 = "Reset",
+          button2 = "Cancel",
+          timeout = 0,
+          whileDead = true,
+          hideOnEscape = true,
+          preferredIndex = 3,
+          OnAccept = function()
+            BarSmith:ResetCharacterSettings()
+          end,
+        }
+        StaticPopup_Show("BARSMITH_RESET_PROFILE")
+      end,
+    })
+    profilesLayout:AddInitializer(initializer)
+  end
 
   ---------- General ----------
   layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("General"))
