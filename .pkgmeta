@@ -2,3 +2,7 @@ package-as: BarSmith
 
 ignore:
   - assets
+  - AGENTS.md
+  - .agents
+  - .github
+  - TESTING.md
