@@ -78,7 +78,7 @@ function BarFrame:UpdateRangeIndicators()
     local data = btn.itemData
     local inRange = true
 
-    if data.spellID and IsSpellInRange then
+    if data.spellID and IsSpellInRange and not InCombatLockdown() then
       local rangeResult = IsSpellInRange(data.spellID, "target")
       if rangeResult == 0 then
         inRange = false

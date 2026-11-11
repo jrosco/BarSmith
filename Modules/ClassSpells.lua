@@ -106,6 +106,11 @@ ClassSpells.CLASS_SPELLS = {
   },
 }
 
+-- WoW: Forever uses the vanilla spell set; swap in the curated table there.
+if BarSmith.IsForever then
+  ClassSpells.CLASS_SPELLS = BarSmith.ForeverData.classSpells
+end
+
 function ClassSpells:AddCustomSpell(spellID)
   if not spellID or not BarSmith.chardb or not BarSmith.chardb.classSpells then
     return false

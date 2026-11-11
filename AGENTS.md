@@ -4,8 +4,8 @@ This is the canonical agent guide for the repo.
 
 ## Repo Context
 - Addon name: BarSmith
-- Target client: World of Warcraft Retail
-- API version: 12 (Midnight expansion)
+- Target client: World of Warcraft Retail (Midnight) and WoW: Forever ("camelot", 1.60.1)
+- API version: Mainline 12.x on both; interface `16001` on Forever, `120001`+ on retail
 - Lua version: WoW Lua only, no external libs unless explicitly added
 - Lua flavor: WoW Lua only, no new external dependencies unless explicitly requested
 - Main entry points: `Init.lua`, `Core.lua`, `Config/Settings.lua`

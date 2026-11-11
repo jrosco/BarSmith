@@ -61,6 +61,17 @@ Hearthstones.ENGINEER_ITEMS = {
   221966,   -- Wormhole Generator: Khaz Algar
 }
 
+-- WoW: Forever (vanilla) has only the single Hearthstone item and no hearthstone
+-- toys, engineering teleporters, or player housing. Swap in the curated set.
+if BarSmith.IsForever then
+  local fd = BarSmith.ForeverData and BarSmith.ForeverData.hearthstones
+  if fd then
+    Hearthstones.HEARTHSTONE_ITEM = fd.hearthstoneItem or Hearthstones.HEARTHSTONE_ITEM
+    Hearthstones.HEARTHSTONE_TOYS = fd.hearthstoneToys or {}
+    Hearthstones.ENGINEER_ITEMS = fd.engineerItems or {}
+  end
+end
+
 ------------------------------------------------------------------------
 -- Housing teleport secure button
 ------------------------------------------------------------------------
@@ -278,7 +289,8 @@ function Hearthstones:GetItems()
   end
 
   local function AddToyHearthstone(toyID)
-    if not (PlayerHasToy(toyID) and C_ToyBox.IsToyUsable(toyID)) then
+    if not PlayerHasToy or not C_ToyBox or not C_ToyBox.IsToyUsable
+      or not (PlayerHasToy(toyID) and C_ToyBox.IsToyUsable(toyID)) then
       return false
     end
 
