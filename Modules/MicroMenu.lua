@@ -7,7 +7,7 @@ local MicroMenu = BarSmith:NewModule("MicroMenu")
 
 MicroMenu.DEFAULT_ICON = "Interface\\Icons\\INV_Gizmo_Gear_01"
 
-local MENU_ENTRIES = {
+local RETAIL_MENU_ENTRIES = {
   {
     key = "character",
     label = "Character",
@@ -88,6 +88,80 @@ local MENU_ENTRIES = {
     icon = "Interface\\Icons\\INV_Misc_QuestionMark",
   },
 }
+
+-- WoW: Forever has no achievements, player housing, or Adventure Guide, but it
+-- adds a Legacy pane (toggle key Y). Show only the version-relevant entries.
+local FOREVER_MENU_ENTRIES = {
+  {
+    key = "character",
+    label = "Character",
+    buttonNames = { "CharacterMicroButton" },
+    icon = "Interface\\Icons\\INV_Chest_Cloth_17",
+    portraitUnit = "player",
+  },
+  {
+    key = "spellbook",
+    label = "Spellbook",
+    buttonNames = { "SpellbookMicroButton" },
+    icon = "Interface\\Icons\\INV_Misc_Book_09",
+  },
+  {
+    key = "talents",
+    label = "Talents",
+    buttonNames = { "TalentMicroButton", "PlayerSpellsMicroButton" },
+    icon = "Interface\\Icons\\Ability_Marksmanship",
+  },
+  {
+    key = "professions",
+    label = "Professions",
+    buttonNames = { "ProfessionMicroButton", "ProfessionsMicroButton" },
+    icon = "Interface\\Icons\\Trade_BlackSmithing",
+  },
+  {
+    key = "legacy",
+    label = "Legacy",
+    buttonNames = { "LegacyMicroButton" },
+    icon = "Interface\\Icons\\INV_Misc_Rune_01",
+  },
+  {
+    key = "questlog",
+    label = "Quest Log",
+    buttonNames = { "QuestLogMicroButton" },
+    icon = "Interface\\Icons\\INV_Misc_Book_07",
+  },
+  {
+    key = "guild",
+    label = "Guild",
+    buttonNames = { "GuildMicroButton", "CommunitiesMicroButton" },
+    icon = "Interface\\Icons\\INV_Banner_03",
+  },
+  {
+    key = "lfg",
+    label = "Group Finder",
+    buttonNames = { "LFDMicroButton", "LFGMicroButton" },
+    icon = "Interface\\Icons\\INV_Misc_GroupLooking",
+  },
+  {
+    key = "collections",
+    label = "Account Collection",
+    buttonNames = { "CollectionsMicroButton" },
+    icon = "Interface\\Icons\\INV_Misc_Toy_02",
+  },
+  {
+    key = "store",
+    label = "Shop",
+    buttonNames = { "StoreMicroButton" },
+    icon = "Interface\\Icons\\INV_Misc_Coin_01",
+  },
+  {
+    key = "help",
+    label = "Menu",
+    buttonNames = { "MainMenuMicroButton", "HelpMicroButton" },
+    icon = "Interface\\Icons\\INV_Misc_QuestionMark",
+  },
+}
+
+local MENU_ENTRIES = BarSmith.IsForever and FOREVER_MENU_ENTRIES or RETAIL_MENU_ENTRIES
 
 local MICRO_BUTTON_NAMES = {
   "CharacterMicroButton",
