@@ -12,6 +12,14 @@ BarSmith.version = C_AddOns.GetAddOnMetadata(ADDON_NAME, "Version") or "dev"
 BarSmith.modules = {}
 BarSmith.events = {}
 
+-- Detect WoW: Forever ("camelot"). It runs the same Mainline UI codebase as
+-- retail Midnight, but reports a 16xxx interface version (e.g. 16001) at a
+-- 60-cap vanilla ruleset. Retail reports 12xxxx; Classic Era (115xx) is out of
+-- scope for this addon.
+local _, _, _, buildInterface = GetBuildInfo()
+buildInterface = tonumber(buildInterface) or 0
+BarSmith.IsForever = buildInterface >= 15000 and buildInterface < 110000
+
 -- Masque support
 local Masque = LibStub and LibStub("Masque", true)
 local MasqueGroups = Masque and {
@@ -220,8 +228,12 @@ function BarSmith:GetPlayerClass()
 end
 
 function BarSmith:GetPlayerSpec()
+  -- GetSpecialization* does not exist on WoW: Forever (no specs in vanilla).
+  if not GetSpecialization then
+    return nil
+  end
   local specIndex = GetSpecialization()
-  if specIndex then
+  if specIndex and GetSpecializationInfo then
     return GetSpecializationInfo(specIndex)
   end
   return nil

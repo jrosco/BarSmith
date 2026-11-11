@@ -6,7 +6,13 @@
 local Mounts = BarSmith:NewModule("Mounts")
 
 -- Well-known spell IDs
-Mounts.RANDOM_FAVORITE_MOUNT = 150544 -- Summon Random Favorite Mount
+-- "Summon Random Favorite Mount" is a retail mount-journal spell and does not
+-- exist in vanilla; disable it on Forever (mounts are spells learned from items).
+if BarSmith.IsForever then
+  Mounts.RANDOM_FAVORITE_MOUNT = nil
+else
+  Mounts.RANDOM_FAVORITE_MOUNT = 150544 -- Summon Random Favorite Mount
+end
 
 function Mounts:AddExtraMount(mountID)
   if not mountID then return false end
@@ -40,14 +46,50 @@ function Mounts:RemoveExtraMount(mountID)
 end
 
 ------------------------------------------------------------------------
--- Gather mount entries for the action bar
+-- Gather mount entries for the action bar (retail mount-journal path)
 ------------------------------------------------------------------------
+
+function Mounts:GetForeverItems()
+  local items = {}
+
+  if not BarSmith.chardb.modules.mounts then
+    return items
+  end
+
+  local knownMounts = BarSmith.ForeverData and BarSmith.ForeverData.mounts or {}
+  local seen = {}
+  for _, mount in ipairs(knownMounts) do
+    local spellID = mount and mount.spellID
+    if spellID and not seen[spellID]
+      and C_SpellBook and C_SpellBook.IsSpellKnown
+      and C_SpellBook.IsSpellKnown(spellID) then
+      seen[spellID] = true
+      local spellInfo = C_Spell and C_Spell.GetSpellInfo and C_Spell.GetSpellInfo(spellID)
+      local name = (spellInfo and spellInfo.name) or ("Mount " .. tostring(spellID))
+      local icon = spellInfo and spellInfo.iconID
+      table.insert(items, {
+        spellID = spellID,
+        name = name,
+        icon = icon,
+        macrotext = "/dismount [mounted]\n/cast " .. name,
+        type = "mount",
+      })
+    end
+  end
+
+  BarSmith:Debug("Mounts (Forever) found: " .. #items)
+  return items
+end
 
 function Mounts:GetItems()
   local items = {}
 
   if not BarSmith.chardb.modules.mounts then
     return items
+  end
+
+  if BarSmith.IsForever then
+    return self:GetForeverItems()
   end
 
   local prefs = BarSmith.chardb.mounts
