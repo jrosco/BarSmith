@@ -51,24 +51,6 @@ local MODULE_LABELS = {
   microMenu    = "Micro Menu",
 }
 
-local MODULE_FLYOUT_ORDER = {
-  { key = "questItems", label = "Quest Items" },
-  { key = "hearthstones", label = "Hearthstones" },
-  { key = "consumables", label = "Consumables (All)" },
-  { key = "consumables_potions", label = "Consumables: Potions" },
-  { key = "consumables_flask", label = "Consumables: Flasks / Elixirs" },
-  { key = "consumables_food", label = "Consumables: Food / Drink" },
-  { key = "consumables_bandage", label = "Consumables: Bandages" },
-  { key = "consumables_utility", label = "Consumables: Utilities" },
-  { key = "trinkets", label = "Trinkets" },
-  { key = "professions", label = "Professions" },
-  { key = "mounts", label = "Mounts" },
-  { key = "toys", label = "Toys" },
-  { key = "classSpells", label = "Class Special Spells" },
-  { key = "macros", label = "Macros" },
-  { key = "microMenu", label = "Micro Menu" },
-}
-
 function BarSmith:UpdateSettingsProxy(key, value)
   if not key then return end
   settingsProxy[key] = value
@@ -130,13 +112,11 @@ function BarSmith:RefreshSettingsProxy()
   end
 
   local overrides = BarSmith.chardb.flyoutDirectionByModule or {}
-  for _, entry in ipairs(MODULE_FLYOUT_ORDER) do
-    settingsProxy["BarSmith_ModFlyout_" .. entry.key] = overrides[entry.key] or "GLOBAL"
-  end
-
   local perLineOverrides = BarSmith.chardb.flyoutPerLineByModule or {}
-  for _, entry in ipairs(MODULE_FLYOUT_ORDER) do
-    settingsProxy["BarSmith_ModFlyoutPerLine_" .. entry.key] = perLineOverrides[entry.key] or 0
+  local priority = BarSmith.chardb.priority or {}
+  for _, key in ipairs(priority) do
+    settingsProxy["BarSmith_ModFlyout_" .. key] = overrides[key] or "GLOBAL"
+    settingsProxy["BarSmith_ModFlyoutPerLine_" .. key] = perLineOverrides[key] or 0
   end
 
   BarSmith:Debug("Settings proxy refreshed.")
@@ -826,47 +806,112 @@ function mod:Init()
 
   ---------- Modules ----------
 
-  -- modulesLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Modules"))
-
+  modulesLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Modules"))
   do
     local initializer = Settings.CreateElementInitializer("BarSmithSettingsNoteTemplate", {
-      text =
-      "Enable or disable entire modules of items with the checkboxes below. This will show or hide the module categories on the bar, and also prevent them from being auto-filled with items.\n\n",
+      text = "Enable each module and configure its flyout. Use Global to inherit the main flyout settings.",
     })
     modulesLayout:AddInitializer(initializer)
   end
 
-  for key, label in pairs(MODULE_LABELS) do
-    local variable = "BarSmith_Mod_" .. key
-    local defaultValue = true
-    if BarSmith.DEFAULTS and BarSmith.DEFAULTS.char and BarSmith.DEFAULTS.char.modules then
-      defaultValue = (BarSmith.DEFAULTS.char.modules[key] == true)
+  -- One grouped section per top-level module (in the profile's priority order):
+  --   header (module name) -> Enable checkbox -> Flyout Direction -> Buttons Per Line
+  do
+    local priority = BarSmith.chardb and BarSmith.chardb.priority
+    if type(priority) ~= "table" or #priority == 0 then
+      priority = defaultsChar.priority
     end
-    local setting = Settings.RegisterAddOnSetting(modulesCategory, variable, variable, settingsProxy, "boolean", label,
-    defaultValue)
-    Settings.SetOnValueChangedCallback(variable, function(_, _, val)
-      BarSmith.chardb.modules[key] = val
-      BarSmith:FireCallback("SETTINGS_CHANGED")
-      if key == "microMenu" then
-        local microMenu = BarSmith:GetModule("MicroMenu")
-        if microMenu and microMenu.UpdateDefaultMenuVisibility then
-          microMenu:UpdateDefaultMenuVisibility()
+
+    for _, key in ipairs(priority) do
+      local label = MODULE_LABELS[key] or key
+
+      -- Module header
+      modulesLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer(label))
+
+      -- Enable / disable
+      do
+        local variable = "BarSmith_Mod_" .. key
+        local defaultValue = true
+        if BarSmith.DEFAULTS and BarSmith.DEFAULTS.char and BarSmith.DEFAULTS.char.modules then
+          defaultValue = (BarSmith.DEFAULTS.char.modules[key] == true)
         end
-      end
-      -- Allow toys to load and wait before trying to enable the module
-      if key == "toys" and val == true then
-        C_Timer.After(1.5, function()
-          if not BarSmith.chardb or not BarSmith.chardb.modules
-            or BarSmith.chardb.modules.toys ~= true then
-            return
+        local setting = Settings.RegisterAddOnSetting(modulesCategory, variable, variable, settingsProxy, "boolean", "Enabled",
+          defaultValue)
+        Settings.SetOnValueChangedCallback(variable, function(_, _, val)
+          BarSmith.chardb.modules[key] = val
+          BarSmith:FireCallback("SETTINGS_CHANGED")
+          if key == "microMenu" then
+            local microMenu = BarSmith:GetModule("MicroMenu")
+            if microMenu and microMenu.UpdateDefaultMenuVisibility then
+              microMenu:UpdateDefaultMenuVisibility()
+            end
           end
-          if not InCombatLockdown() then
-            BarSmith:RunAutoFill(true)
+          -- Allow toys to load and wait before trying to enable the module
+          if key == "toys" and val == true then
+            C_Timer.After(1.5, function()
+              if not BarSmith.chardb or not BarSmith.chardb.modules
+                or BarSmith.chardb.modules.toys ~= true then
+                return
+              end
+              if not InCombatLockdown() then
+                BarSmith:RunAutoFill(true)
+              end
+            end)
           end
         end)
+        Settings.CreateCheckbox(modulesCategory, setting, "Enable or disable this module.")
       end
-    end)
-    Settings.CreateCheckbox(modulesCategory, setting, "Enable or disable the " .. label .. " module.")
+
+      -- Flyout direction override
+      do
+        local variable = "BarSmith_ModFlyout_" .. key
+        local name = "Flyout Direction"
+        local tooltip = "Override flyout direction for this module. Use Global to inherit the main setting."
+        local defaultValue = "GLOBAL"
+        local setting = Settings.RegisterAddOnSetting(modulesCategory, variable, variable, settingsProxy, "string", name,
+          defaultValue)
+        Settings.SetOnValueChangedCallback(variable, function(_, _, val)
+          local direction = NormalizeFlyoutDirection(val, true)
+          BarSmith.chardb.flyoutDirectionByModule = BarSmith.chardb.flyoutDirectionByModule or {}
+          if direction == "GLOBAL" then
+            BarSmith.chardb.flyoutDirectionByModule[key] = nil
+          else
+            BarSmith.chardb.flyoutDirectionByModule[key] = direction
+          end
+          settingsProxy[variable] = direction
+          local barFrame = BarSmith:GetModule("BarFrame")
+          if barFrame then
+            barFrame:HideAllFlyouts()
+          end
+        end)
+        Settings.CreateDropdown(modulesCategory, setting, BuildModuleDirectionDropdownOptions, tooltip)
+      end
+
+      -- Buttons per line override
+      do
+        local variable = "BarSmith_ModFlyoutPerLine_" .. key
+        local name = "Buttons Per Line"
+        local tooltip = "Override buttons per line for this module. Use Global to inherit the main setting."
+        local setting = Settings.RegisterAddOnSetting(modulesCategory, variable, variable, settingsProxy, "number", name, 0)
+        Settings.SetOnValueChangedCallback(variable, function(_, _, val)
+          local n = math.floor((tonumber(val) or 0) + 0.5)
+          BarSmith.chardb.flyoutPerLineByModule = BarSmith.chardb.flyoutPerLineByModule or {}
+          if n <= 0 then
+            BarSmith.chardb.flyoutPerLineByModule[key] = nil
+          else
+            BarSmith.chardb.flyoutPerLineByModule[key] = math.max(1, math.min(24, n))
+          end
+          settingsProxy[variable] = n <= 0 and 0 or BarSmith.chardb.flyoutPerLineByModule[key]
+          local barFrame = BarSmith:GetModule("BarFrame")
+          if barFrame then
+            barFrame:RefreshFlyoutLayout()
+          end
+        end)
+        local options = Settings.CreateSliderOptions(0, 24, 1)
+        options:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right, FormatFlyoutPerLine)
+        Settings.CreateSlider(modulesCategory, setting, options, tooltip)
+      end
+    end
   end
 
   ---------- Module Split ----------
@@ -951,61 +996,6 @@ function mod:Init()
       BarSmith:FireCallback("SETTINGS_CHANGED")
     end)
     Settings.CreateCheckbox(modulesCategory, setting, tooltip)
-  end
-
-  modulesLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Module Flyout Overrides"))
-  do
-    local initializer = Settings.CreateElementInitializer("BarSmithSettingsNoteTemplate", {
-      text = "Override flyout direction or buttons per line for each module. Use Global to inherit the main setting.",
-    })
-    modulesLayout:AddInitializer(initializer)
-  end
-
-  for _, entry in ipairs(MODULE_FLYOUT_ORDER) do
-    modulesLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer(entry.label))
-    local variable = "BarSmith_ModFlyout_" .. entry.key
-    local name = "Flyout Direction"
-    local tooltip = "Override flyout direction for this module. Use Global to inherit the main setting."
-    local defaultValue = "GLOBAL"
-    local setting = Settings.RegisterAddOnSetting(modulesCategory, variable, variable, settingsProxy, "string", name,
-      defaultValue)
-    Settings.SetOnValueChangedCallback(variable, function(_, _, val)
-      local direction = NormalizeFlyoutDirection(val, true)
-      BarSmith.chardb.flyoutDirectionByModule = BarSmith.chardb.flyoutDirectionByModule or {}
-      if direction == "GLOBAL" then
-        BarSmith.chardb.flyoutDirectionByModule[entry.key] = nil
-      else
-        BarSmith.chardb.flyoutDirectionByModule[entry.key] = direction
-      end
-      settingsProxy[variable] = direction
-      local barFrame = BarSmith:GetModule("BarFrame")
-      if barFrame then
-        barFrame:HideAllFlyouts()
-      end
-    end)
-    Settings.CreateDropdown(modulesCategory, setting, BuildModuleDirectionDropdownOptions, tooltip)
-
-    local perLineVariable = "BarSmith_ModFlyoutPerLine_" .. entry.key
-    local perLineName = "Buttons Per Line"
-    local perLineTooltip = "Override buttons per line for this module. Use Global to inherit the main setting."
-    local perLineSetting = Settings.RegisterAddOnSetting(modulesCategory, perLineVariable, perLineVariable, settingsProxy, "number", perLineName, 0)
-    Settings.SetOnValueChangedCallback(perLineVariable, function(_, _, val)
-      local n = math.floor((tonumber(val) or 0) + 0.5)
-      BarSmith.chardb.flyoutPerLineByModule = BarSmith.chardb.flyoutPerLineByModule or {}
-      if n <= 0 then
-        BarSmith.chardb.flyoutPerLineByModule[entry.key] = nil
-      else
-        BarSmith.chardb.flyoutPerLineByModule[entry.key] = math.max(1, math.min(24, n))
-      end
-      settingsProxy[perLineVariable] = n <= 0 and 0 or BarSmith.chardb.flyoutPerLineByModule[entry.key]
-      local barFrame = BarSmith:GetModule("BarFrame")
-      if barFrame then
-        barFrame:RefreshFlyoutLayout()
-      end
-    end)
-    local perLineOptions = Settings.CreateSliderOptions(0, 24, 1)
-    perLineOptions:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right, FormatFlyoutPerLine)
-    Settings.CreateSlider(modulesCategory, perLineSetting, perLineOptions, perLineTooltip)
   end
 
   ---------- Consumable Options ----------
