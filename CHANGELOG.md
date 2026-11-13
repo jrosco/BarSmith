@@ -5,6 +5,18 @@ All notable changes to BarSmith are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-11-13
+
+### Added
+
+- Configurable flyout grid layout: flyouts can now wrap into multiple rows and columns instead of a single line.
+  - New global "Flyout Buttons Per Line" setting (default 12 keeps the existing single-line layout).
+  - Per-module "Flyout Direction" and "Buttons Per Line" overrides.
+
+### Changed
+
+- Consolidated the per-module enable/disable toggles and flyout overrides into a single "Modules" settings section, with each module's Enable, Flyout Direction, and Buttons Per Line grouped together under its own header.
+
 ## [1.2.0] - 2026-11-11
 
 ### Added

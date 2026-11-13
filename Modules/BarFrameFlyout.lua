@@ -22,6 +22,7 @@ function BarFrame:SetFlyoutItems(btn, children)
       childCount = math.min(childCount, max)
     end
   end
+  btn.flyoutCount = childCount
   if not InCombatLockdown() then
     btn:SetAttribute("bs_flyout_count", childCount)
   end
@@ -89,20 +90,36 @@ function BarFrame:UpdateFlyoutPositions(btn)
   local topLevel = self.frame:GetFrameLevel() + 50
   local direction = self:GetFlyoutDirection(btn)
   local buttonSize = self:GetButtonSize()
+  local pad = C.BUTTON_PADDING
+  local step = buttonSize + pad
+
+  local perLine = self:GetFlyoutPerLine(btn)
+  local count = btn.flyoutCount or (btn.flyoutItems and #btn.flyoutItems or 0)
+  local lineCount = math.max(1, math.ceil(count / math.max(1, perLine)))
 
   for i, childBtn in ipairs(btn.flyoutButtons or {}) do
-    local offset = C.BUTTON_PADDING + ((i - 1) * (buttonSize + C.BUTTON_PADDING))
+    -- along = position along the flyout direction; perp = wrapped line perpendicular to it.
+    local along = (i - 1) % perLine
+    local perp = math.floor((i - 1) / perLine)
+    local alongOffset = pad + along * step
+
     childBtn:SetFrameLevel(topLevel + i)
     childBtn:ClearAllPoints()
+
     if direction == "TOP" then
-      childBtn:SetPoint("BOTTOM", btn, "TOP", 0, offset)
+      local x = (perp - (lineCount - 1) / 2) * step
+      childBtn:SetPoint("BOTTOM", btn, "TOP", x, alongOffset)
     elseif direction == "BOTTOM" then
-      childBtn:SetPoint("TOP", btn, "BOTTOM", 0, -offset)
+      local x = (perp - (lineCount - 1) / 2) * step
+      childBtn:SetPoint("TOP", btn, "BOTTOM", x, -alongOffset)
     elseif direction == "LEFT" then
-      childBtn:SetPoint("RIGHT", btn, "LEFT", -offset, 0)
+      local y = ((lineCount - 1) / 2 - perp) * step
+      childBtn:SetPoint("RIGHT", btn, "LEFT", -alongOffset, y)
     else
-      childBtn:SetPoint("LEFT", btn, "RIGHT", offset, 0)
+      local y = ((lineCount - 1) / 2 - perp) * step
+      childBtn:SetPoint("LEFT", btn, "RIGHT", alongOffset, y)
     end
+
     childBtn:SetSize(buttonSize, buttonSize)
     self:ApplyOverlayIconStyle(childBtn)
   end
@@ -213,6 +230,40 @@ function BarFrame:GetFlyoutDirection(btnOrModule)
     return "TOP"
   end
   return direction
+end
+
+function BarFrame:GetFlyoutPerLine(btnOrModule)
+  local moduleKey = nil
+  if type(btnOrModule) == "string" then
+    moduleKey = btnOrModule
+  else
+    moduleKey = GetModuleKeyFromButton(btnOrModule)
+  end
+
+  local value = nil
+  local chardb = BarSmith.chardb
+  if moduleKey and chardb and chardb.flyoutPerLineByModule then
+    value = chardb.flyoutPerLineByModule[moduleKey]
+  end
+  if not value then
+    value = chardb and chardb.flyoutPerLine or 12
+  end
+
+  local max = 24
+  value = tonumber(value)
+  if not value or value < 1 then
+    return max
+  end
+  return math.max(1, math.min(max, math.floor(value)))
+end
+
+function BarFrame:RefreshFlyoutLayout()
+  if InCombatLockdown() then return end
+  for _, btn in ipairs(self.buttons or {}) do
+    if btn.flyoutOpen then
+      self:UpdateFlyoutPositions(btn)
+    end
+  end
 end
 
 function BarFrame:ShowFlyout(btn)
