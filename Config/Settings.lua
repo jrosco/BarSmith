@@ -85,6 +85,7 @@ function BarSmith:RefreshSettingsProxy()
   settingsProxy["BarSmith_IconSize"]          = BarSmith.chardb.barIconSize or 36
   settingsProxy["BarSmith_Alpha"]             = BarSmith.chardb.barAlpha or 1
   settingsProxy["BarSmith_FlyoutMax"]         = BarSmith.chardb.flyoutMax or 12
+  settingsProxy["BarSmith_FlyoutPerLine"]     = BarSmith.chardb.flyoutPerLine or 12
   settingsProxy["BarSmith_ShowBackdrop"]      = (BarSmith.chardb.barShowBackdrop ~= false)
   settingsProxy["BarSmith_AutoHideMouseover"] = (BarSmith.chardb.barAutoHideMouseover == true)
   settingsProxy["BarSmith_FlyoutDirection"]   = BarSmith.chardb.flyoutDirection or "TOP"
@@ -133,6 +134,11 @@ function BarSmith:RefreshSettingsProxy()
     settingsProxy["BarSmith_ModFlyout_" .. entry.key] = overrides[entry.key] or "GLOBAL"
   end
 
+  local perLineOverrides = BarSmith.chardb.flyoutPerLineByModule or {}
+  for _, entry in ipairs(MODULE_FLYOUT_ORDER) do
+    settingsProxy["BarSmith_ModFlyoutPerLine_" .. entry.key] = perLineOverrides[entry.key] or 0
+  end
+
   BarSmith:Debug("Settings proxy refreshed.")
 end
 
@@ -177,6 +183,14 @@ end
 
 local function FormatInt(value)
   return tostring(math.floor((tonumber(value) or 0) + 0.5))
+end
+
+local function FormatFlyoutPerLine(value)
+  local n = math.floor((tonumber(value) or 0) + 0.5)
+  if n <= 0 then
+    return "Global"
+  end
+  return tostring(n)
 end
 
 local function FormatFloat2(value)
@@ -627,6 +641,26 @@ function mod:Init()
     Settings.CreateDropdown(category, setting, BuildDirectionDropdownOptions, tooltip)
   end
 
+  -- Flyout buttons per line
+  do
+    local variable = "BarSmith_FlyoutPerLine"
+    local name = "Flyout Buttons Per Line"
+    local tooltip = "How many buttons are laid out along the flyout direction before wrapping to the next line. Set to the button cap for a single line."
+    local defaultValue = defaultsChar.flyoutPerLine or 12
+    local setting = Settings.RegisterAddOnSetting(category, variable, variable, settingsProxy, "number", name,
+    defaultValue)
+    Settings.SetOnValueChangedCallback(variable, function(_, _, val)
+      BarSmith.chardb.flyoutPerLine = math.max(1, math.min(24, math.floor(tonumber(val) or 12)))
+      local barFrame = BarSmith:GetModule("BarFrame")
+      if barFrame then
+        barFrame:RefreshFlyoutLayout()
+      end
+    end)
+    local options = Settings.CreateSliderOptions(1, 24, 1)
+    options:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right, FormatInt)
+    Settings.CreateSlider(category, setting, options, tooltip)
+  end
+
   -- Tooltip modifier (main bar)
   do
     local variable = "BarSmith_Tooltip_Mod"
@@ -919,10 +953,10 @@ function mod:Init()
     Settings.CreateCheckbox(modulesCategory, setting, tooltip)
   end
 
-  modulesLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Module Flyout Direction Overrides"))
+  modulesLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Module Flyout Overrides"))
   do
     local initializer = Settings.CreateElementInitializer("BarSmithSettingsNoteTemplate", {
-      text = "Override flyout direction per module. Use Global to inherit the main flyout direction setting.",
+      text = "Override flyout direction or buttons per line for each module. Use Global to inherit the main setting.",
     })
     modulesLayout:AddInitializer(initializer)
   end
@@ -949,6 +983,28 @@ function mod:Init()
       end
     end)
     Settings.CreateDropdown(modulesCategory, setting, BuildModuleDirectionDropdownOptions, tooltip)
+
+    local perLineVariable = "BarSmith_ModFlyoutPerLine_" .. entry.key
+    local perLineName = entry.label .. " Buttons Per Line"
+    local perLineTooltip = "Override buttons per line for the " .. entry.label .. " button. Use Global to inherit the main setting."
+    local perLineSetting = Settings.RegisterAddOnSetting(modulesCategory, perLineVariable, perLineVariable, settingsProxy, "number", perLineName, 0)
+    Settings.SetOnValueChangedCallback(perLineVariable, function(_, _, val)
+      local n = math.floor((tonumber(val) or 0) + 0.5)
+      BarSmith.chardb.flyoutPerLineByModule = BarSmith.chardb.flyoutPerLineByModule or {}
+      if n <= 0 then
+        BarSmith.chardb.flyoutPerLineByModule[entry.key] = nil
+      else
+        BarSmith.chardb.flyoutPerLineByModule[entry.key] = math.max(1, math.min(24, n))
+      end
+      settingsProxy[perLineVariable] = n <= 0 and 0 or BarSmith.chardb.flyoutPerLineByModule[entry.key]
+      local barFrame = BarSmith:GetModule("BarFrame")
+      if barFrame then
+        barFrame:RefreshFlyoutLayout()
+      end
+    end)
+    local perLineOptions = Settings.CreateSliderOptions(0, 24, 1)
+    perLineOptions:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right, FormatFlyoutPerLine)
+    Settings.CreateSlider(modulesCategory, perLineSetting, perLineOptions, perLineTooltip)
   end
 
   ---------- Consumable Options ----------

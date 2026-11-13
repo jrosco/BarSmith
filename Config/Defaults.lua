@@ -40,6 +40,8 @@ BarSmith.DEFAULTS = {
     flyoutMax = 12,                   -- max buttons per flyout (1-24)
     flyoutDirection = "TOP",          -- TOP, BOTTOM, LEFT, RIGHT
     flyoutDirectionByModule = {},     -- moduleKey -> TOP/BOTTOM/LEFT/RIGHT (nil = global)
+    flyoutPerLine = 12,               -- buttons per flyout line before wrapping (1-24)
+    flyoutPerLineByModule = {},       -- moduleKey -> per-line number (nil = global)
     tooltipModifier = "NONE",         -- NONE, ALT, SHIFT, CTRL
     barPosition = nil,                -- saved {point, relPoint, x, y}
     hideEmptyModules = true,          -- hide placeholder buttons for enabled but empty modules
