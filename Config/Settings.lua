@@ -962,9 +962,10 @@ function mod:Init()
   end
 
   for _, entry in ipairs(MODULE_FLYOUT_ORDER) do
+    modulesLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer(entry.label))
     local variable = "BarSmith_ModFlyout_" .. entry.key
-    local name = entry.label .. " Flyout Direction"
-    local tooltip = "Override flyout direction for the " .. entry.label .. " button. Use Global to inherit the main setting."
+    local name = "Flyout Direction"
+    local tooltip = "Override flyout direction for this module. Use Global to inherit the main setting."
     local defaultValue = "GLOBAL"
     local setting = Settings.RegisterAddOnSetting(modulesCategory, variable, variable, settingsProxy, "string", name,
       defaultValue)
@@ -985,8 +986,8 @@ function mod:Init()
     Settings.CreateDropdown(modulesCategory, setting, BuildModuleDirectionDropdownOptions, tooltip)
 
     local perLineVariable = "BarSmith_ModFlyoutPerLine_" .. entry.key
-    local perLineName = entry.label .. " Buttons Per Line"
-    local perLineTooltip = "Override buttons per line for the " .. entry.label .. " button. Use Global to inherit the main setting."
+    local perLineName = "Buttons Per Line"
+    local perLineTooltip = "Override buttons per line for this module. Use Global to inherit the main setting."
     local perLineSetting = Settings.RegisterAddOnSetting(modulesCategory, perLineVariable, perLineVariable, settingsProxy, "number", perLineName, 0)
     Settings.SetOnValueChangedCallback(perLineVariable, function(_, _, val)
       local n = math.floor((tonumber(val) or 0) + 0.5)
